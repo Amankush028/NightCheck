@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nightcheck</string>
+    <string name="widget_today_tasks_description">Shows today\'s pending tasks with inline completion</string>
+    <string name="widget_quick_add_description">Quickly add a new task without opening the app</string>
+</resources>
