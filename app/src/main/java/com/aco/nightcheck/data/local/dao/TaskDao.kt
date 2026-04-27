@@ -67,6 +67,10 @@ interface TaskDao {
     @Query("DELETE FROM tasks WHERE id = :id")
     suspend fun deleteTaskById(id: Long)
 
+    /** All pending tasks with no due date – undated inbox */
+    @Query("SELECT * FROM tasks WHERE dueDateEpochDay IS NULL AND status = 0 ORDER BY priority DESC")
+    fun observeUndatedPendingTasks(): Flow<List<TaskEntity>>
+
     /** Quick status update used by widgets and End-of-Day Review */
     @Query("UPDATE tasks SET status = :status, updatedAtMillis = :now WHERE id = :id")
     suspend fun updateTaskStatus(id: Long, status: Int, now: Long = System.currentTimeMillis())

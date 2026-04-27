@@ -23,7 +23,7 @@ import javax.inject.Inject
 data class AddEditTaskUiState(
     val title: String = "",
     val description: String = "",
-    val dueDate: LocalDate? = null,
+    val dueDate: LocalDate? = LocalDate.now(),
     val priority: Priority = Priority.MEDIUM,
     val status: TaskStatus = TaskStatus.PENDING,
     val reminderTime: LocalDateTime? = null,

@@ -1,4 +1,6 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.nightcheck.ui.addedittask
+
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +18,21 @@ import com.nightcheck.domain.model.Priority
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DateRange
+import java.time.Instant
+import java.time.ZoneOffset
+import androidx.compose.material.icons.filled.Notifications
+import java.time.LocalTime
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,20 +138,54 @@ private fun DueDateField(
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate?) -> Unit
 ) {
-    // Placeholder: In a real implementation wire up DatePickerDialog here
+    var showDialog by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDate?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
+    )
+
     OutlinedTextField(
-        value = selectedDate?.format(DateTimeFormatter.ISO_LOCAL_DATE) ?: "",
-        onValueChange = { /* handled by picker */ },
-        label = { Text("Due Date (YYYY-MM-DD)") },
+        value = selectedDate?.format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) ?: "No due date",
+        onValueChange = { },
+        label = { Text("Due Date") },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("No due date") },
         readOnly = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+        ),
         trailingIcon = {
-            if (selectedDate != null) {
-                TextButton(onClick = { onDateSelected(null) }) { Text("Clear") }
+            Row {
+                if (selectedDate != null) {
+                    IconButton(onClick = { onDateSelected(null) }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear date")
+                    }
+                }
+                IconButton(onClick = { showDialog = true }) {
+                    Icon(Icons.Default.DateRange, contentDescription = "Select Date")
+                }
             }
         }
     )
+
+    if (showDialog) {
+        DatePickerDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val date = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                        onDateSelected(date)
+                    }
+                    showDialog = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 }
 
 @Composable
@@ -158,22 +209,80 @@ private fun PrioritySelector(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReminderTimeField(
     reminderTime: LocalDateTime?,
     onTimeSelected: (LocalDateTime?) -> Unit
 ) {
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    // Temporarily hold the date while waiting for time selection
+    var tempDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    val datePickerState = rememberDatePickerState()
+    val timePickerState = rememberTimePickerState()
+
     OutlinedTextField(
-        value = reminderTime?.format(DateTimeFormatter.ofPattern("MMM d, h:mm a")) ?: "",
+        value = reminderTime?.format(DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a")) ?: "",
         onValueChange = {},
         label = { Text("Reminder") },
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("No reminder") },
         readOnly = true,
         trailingIcon = {
-            if (reminderTime != null) {
-                TextButton(onClick = { onTimeSelected(null) }) { Text("Clear") }
+            Row {
+                if (reminderTime != null) {
+                    TextButton(onClick = { onTimeSelected(null) }) { Text("Clear") }
+                }
+                IconButton(onClick = { showDatePicker = true }) {
+                    Icon(Icons.Default.Notifications, contentDescription = "Set Reminder")
+                }
             }
         }
     )
+
+    // 1. Date Picker Dialog
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        tempDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                        showDatePicker = false
+                        showTimePicker = true // Move to time selection
+                    }
+                }) { Text("Next") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    // 2. Time Picker Dialog
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    tempDate?.let { date ->
+                        val time = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                        onTimeSelected(LocalDateTime.of(date, time))
+                    }
+                    showTimePicker = false
+                }) { Text("Confirm") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            },
+            text = {
+                TimePicker(state = timePickerState)
+            }
+        )
+    }
 }

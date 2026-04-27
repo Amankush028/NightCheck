@@ -201,43 +201,46 @@ private fun ReviewTaskCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp),
+                        .padding(top = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Mark Complete
                     FilledTonalButton(
                         onClick = onMarkComplete,
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp), // Reduces inner margins
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         )
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Done", style = MaterialTheme.typography.labelMedium)
+                        Text("Done", style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
                     }
 
                     // Snooze to tomorrow
                     FilledTonalButton(
                         onClick = onSnooze,
                         modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = MaterialTheme.colorScheme.tertiaryContainer
                         )
                     ) {
                         Icon(Icons.Default.Snooze, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Tomorrow", style = MaterialTheme.typography.labelMedium)
+                        Text("Delay", style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
                     }
 
                     // Dismiss
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Dismiss", style = MaterialTheme.typography.labelMedium)
+                        Text("Skip", style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
                     }
                 }
             }

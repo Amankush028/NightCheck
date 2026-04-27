@@ -20,6 +20,7 @@ import com.nightcheck.ui.components.NoteCard
 import com.nightcheck.ui.components.TaskCard
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.shape.CircleShape
 
 @Composable
 fun HomeScreen(
@@ -43,11 +44,17 @@ fun HomeScreen(
             // Date header
             item {
                 Text(
-                    text = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    text = "Hello,",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(24.dp))
             }
 
             // Today's tasks section
@@ -64,7 +71,11 @@ fun HomeScreen(
                 }
             } else {
                 items(todayTasks, key = { it.id }) { task ->
-                    TaskCard(task = task, onClick = { onNavigateToTask(task.id) })
+                    TaskCard(
+                        task = task,
+                        onClick = { onNavigateToTask(task.id) },
+                        onToggleStatus = { newStatus -> viewModel.toggleTaskStatus(task, newStatus) } // <-- Add this line
+                    )
                 }
             }
 
@@ -121,15 +132,25 @@ private fun SectionHeader(title: String, count: Int) {
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
         if (count > 0) {
-            Badge { Text(count.toString()) }
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Text(
+                    text = count.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
         }
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(12.dp))
 }
-
 @Composable
 private fun EmptyStateHint(message: String) {
     Text(

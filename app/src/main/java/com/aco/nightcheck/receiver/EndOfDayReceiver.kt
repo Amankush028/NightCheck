@@ -33,14 +33,10 @@ class EndOfDayReceiver : BroadcastReceiver() {
                     .first()
 
                 if (pendingTasks.isNotEmpty()) {
-                    // Post notification that taps into the full-screen review
+                    // Post notification that uses Full-Screen Intent to pop up
                     notificationHelper.showEndOfDayNotification(pendingTasks.size)
 
-                    // Also launch the review Activity directly (works on locked screen)
-                    val reviewIntent = Intent(context, EndOfDayReviewActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    }
-                    context.startActivity(reviewIntent)
+                    // DELETE the context.startActivity(reviewIntent) lines that used to be here!
                 }
             } finally {
                 pendingResult.finish()

@@ -33,30 +33,36 @@ class TasksViewModel @Inject constructor(
     private val _filter = MutableStateFlow(TaskFilter.TODAY)
     private val _sortOrder = MutableStateFlow(TaskSortOrder.PRIORITY)
 
-    val uiState: StateFlow<TasksUiState> = combine(
-        _filter,
-        _sortOrder
-    ) { filter, sort -> filter to sort }
-        .flatMapLatest { (filter, sort) ->
-            val flow: Flow<List<Task>> = when (filter) {
-                TaskFilter.TODAY     -> taskRepository.observeTasksForDay(LocalDate.now())
-                TaskFilter.UPCOMING  -> taskRepository.observeUpcomingTasks(LocalDate.now())
-                TaskFilter.COMPLETED -> taskRepository.observeCompletedTasks()
+    val uiState: StateFlow<TasksUiState> = combine(_filter, _sortOrder) { filter, sort ->
+        filter to sort
+    }.flatMapLatest { (filter, sort) ->
+        val today = LocalDate.now()
+        val flow: Flow<List<Task>> = when (filter) {
+            TaskFilter.TODAY -> taskRepository.observeAllTasks().map { tasks ->
+                tasks.filter { it.dueDate == null || it.dueDate == today }
+                    .filter { it.status != TaskStatus.COMPLETED }
             }
-            flow.map { tasks ->
-                val sorted = when (sort) {
-                    TaskSortOrder.PRIORITY -> tasks.sortedByDescending { it.priority.ordinal }
-                    TaskSortOrder.DUE_DATE -> tasks.sortedBy { it.dueDate }
-                }
-                TasksUiState(tasks = sorted, filter = filter, sortOrder = sort)
-            }
+            TaskFilter.UPCOMING -> taskRepository.observeUpcomingTasks(today)
+            TaskFilter.COMPLETED -> taskRepository.observeCompletedTasks()
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
-
+        flow.map { tasks ->
+            val sorted = when (sort) {
+                TaskSortOrder.PRIORITY -> tasks.sortedByDescending { it.priority.ordinal }
+                TaskSortOrder.DUE_DATE -> tasks.sortedWith(
+                    compareBy(nullsLast()) { it.dueDate }
+                )
+            }
+            TasksUiState(tasks = sorted, filter = filter, sortOrder = sort)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TasksUiState())
     fun setFilter(filter: TaskFilter) { _filter.value = filter }
     fun setSortOrder(sort: TaskSortOrder) { _sortOrder.value = sort }
 
-    fun markComplete(taskId: Long) = viewModelScope.launch {
-        updateTaskStatus(taskId, TaskStatus.COMPLETED)
+    // Replace markComplete with this function:
+    fun toggleTaskStatus(task: Task, newStatus: TaskStatus) {
+        viewModelScope.launch {
+            // Use the exact name injected in the constructor
+            updateTaskStatus(task.id, newStatus)
+        }
     }
 }

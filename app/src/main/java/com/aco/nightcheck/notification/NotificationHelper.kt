@@ -36,13 +36,14 @@ class NotificationHelper @Inject constructor(
             enableVibration(true)
         }
 
-        // Channel 2: End-of-Day Review (default importance)
+        // Channel 2: End-of-Day Review (Upgraded to HIGH)
         val eodChannel = NotificationChannel(
             CHANNEL_END_OF_DAY,
             "End-of-Day Review",
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_HIGH
         ).apply {
             description = "Daily end-of-day review prompt"
+            enableVibration(true)
         }
 
         manager.createNotificationChannels(listOf(reminderChannel, eodChannel))
@@ -74,7 +75,10 @@ class NotificationHelper @Inject constructor(
     // ── End-of-Day review notification ───────────────────────────────────────
 
     fun showEndOfDayNotification(pendingCount: Int) {
-        val tapIntent = Intent(context, com.nightcheck.ui.review.EndOfDayReviewActivity::class.java)
+        val tapIntent = Intent(context, com.nightcheck.ui.review.EndOfDayReviewActivity::class.java).apply {
+            // Ensure it launches as a fresh task over everything else
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
         val tapPending = PendingIntent.getActivity(
             context, EOD_NOTIFICATION_ID, tapIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -84,8 +88,10 @@ class NotificationHelper @Inject constructor(
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("End of Day Review")
             .setContentText("You have $pendingCount task(s) pending today.")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM) // Categorize as alarm to bypass Doze
             .setContentIntent(tapPending)
+            .setFullScreenIntent(tapPending, true) // This triggers the "Pop up" over other apps
             .setAutoCancel(true)
             .build()
 

@@ -73,13 +73,15 @@ class AlarmScheduler @Inject constructor(
      */
     fun scheduleEndOfDay(hourOfDay: Int, minute: Int) {
         val triggerMillis = nextOccurrenceMillis(hourOfDay, minute)
-        val pendingIntent = endOfDayPendingIntent(PendingIntent.FLAG_UPDATE_CURRENT)
+        val pendingIntent = endOfDayPendingIntent(PendingIntent.FLAG_UPDATE_CURRENT) ?: return
 
-        fun cancelEndOfDay() {
-            val pendingIntent = endOfDayPendingIntent(PendingIntent.FLAG_NO_CREATE) ?: return
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
-        }
+        // Set the repeating alarm
+        alarmManager.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            triggerMillis,
+            AlarmManager.INTERVAL_DAY,
+            pendingIntent
+        )
     }
 
     fun cancelEndOfDay() {

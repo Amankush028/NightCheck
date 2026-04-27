@@ -110,12 +110,15 @@ fun TasksScreen(
                     items(uiState.tasks, key = { it.id }) { task ->
                         TaskCard(
                             task = task,
-                            onClick = { onNavigateToTask(task.id) }
+                            onClick = { onNavigateToTask(task.id) },
+                            onToggleStatus = { newStatus ->
+                                viewModel.toggleTaskStatus(task, newStatus) // <--- FIXED THIS LINE
+                            }
                         )
                     }
-                }
                 item { Spacer(Modifier.height(80.dp)) }
             }
         }
     }
+}
 }
