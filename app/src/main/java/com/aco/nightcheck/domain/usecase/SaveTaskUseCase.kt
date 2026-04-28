@@ -2,7 +2,7 @@ package com.nightcheck.domain.usecase
 
 import com.nightcheck.domain.model.Task
 import com.nightcheck.domain.repository.TaskRepository
-import com.nightcheck.util.AlarmScheduler
+import com.aco.nightcheck.util.AlarmScheduler
 import javax.inject.Inject
 
 class SaveTaskUseCase @Inject constructor(

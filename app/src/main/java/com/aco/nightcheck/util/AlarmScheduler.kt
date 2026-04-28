@@ -1,13 +1,13 @@
-package com.nightcheck.util
+package com.aco.nightcheck.util
 
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import com.nightcheck.domain.model.Task
 import com.nightcheck.receiver.EndOfDayReceiver
 import com.nightcheck.receiver.ReminderReceiver
+import com.nightcheck.ui.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -20,7 +20,16 @@ class AlarmScheduler @Inject constructor(
 ) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    // ── Task Reminders ────────────────────────────────────────────────────────
+    // Creates a safe intent for the system to use for the status bar alarm icon
+    private fun getShowIntent(): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java)
+        return PendingIntent.getActivity(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
 
     fun scheduleTaskReminder(task: Task) {
         val reminderTime = task.reminderTime ?: return
@@ -28,6 +37,7 @@ class AlarmScheduler @Inject constructor(
         if (triggerMillis <= System.currentTimeMillis()) return
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
+            action = "com.nightcheck.ACTION_REMINDER"
             putExtra(EXTRA_TASK_ID, task.id)
             putExtra(EXTRA_TASK_TITLE, task.title)
         }
@@ -38,22 +48,15 @@ class AlarmScheduler @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            !alarmManager.canScheduleExactAlarms()
-        ) {
-            // Fallback: inexact alarm if permission not granted
-            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
-        } else {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerMillis,
-                pendingIntent
-            )
-        }
+        // Use the proper Activity showIntent here
+        val info = AlarmManager.AlarmClockInfo(triggerMillis, getShowIntent())
+        alarmManager.setAlarmClock(info, pendingIntent)
     }
 
     fun cancelTaskReminder(taskId: Long) {
-        val intent = Intent(context, ReminderReceiver::class.java)
+        val intent = Intent(context, ReminderReceiver::class.java).apply {
+            action = "com.nightcheck.ACTION_REMINDER"
+        }
         val pendingIntent = PendingIntent.getBroadcast(
             context,
             taskId.toInt(),
@@ -64,24 +67,13 @@ class AlarmScheduler @Inject constructor(
         pendingIntent.cancel()
     }
 
-    // ── End-of-Day Review ─────────────────────────────────────────────────────
-
-    /**
-     * Schedules the nightly End-of-Day review alarm.
-     * @param hourOfDay 0-23
-     * @param minute    0-59
-     */
     fun scheduleEndOfDay(hourOfDay: Int, minute: Int) {
         val triggerMillis = nextOccurrenceMillis(hourOfDay, minute)
         val pendingIntent = endOfDayPendingIntent(PendingIntent.FLAG_UPDATE_CURRENT) ?: return
 
-        // Set the repeating alarm
-        alarmManager.setRepeating(
-            AlarmManager.RTC_WAKEUP,
-            triggerMillis,
-            AlarmManager.INTERVAL_DAY,
-            pendingIntent
-        )
+        // Use the proper Activity showIntent here
+        val info = AlarmManager.AlarmClockInfo(triggerMillis, getShowIntent())
+        alarmManager.setAlarmClock(info, pendingIntent)
     }
 
     fun cancelEndOfDay() {
@@ -90,13 +82,13 @@ class AlarmScheduler @Inject constructor(
         pendingIntent.cancel()
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
     private fun endOfDayPendingIntent(flags: Int): PendingIntent? =
         PendingIntent.getBroadcast(
             context,
             END_OF_DAY_REQUEST_CODE,
-            Intent(context, EndOfDayReceiver::class.java),
+            Intent(context, EndOfDayReceiver::class.java).apply {
+                action = "com.nightcheck.ACTION_END_OF_DAY"
+            },
             flags or PendingIntent.FLAG_IMMUTABLE
         )
 

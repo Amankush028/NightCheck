@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nightcheck.ui.theme.NightcheckTheme
 import dagger.hilt.android.AndroidEntryPoint
+import android.os.Build
+import android.view.WindowManager
 
 @AndroidEntryPoint
 class EndOfDayReviewActivity : ComponentActivity() {
@@ -31,6 +33,17 @@ class EndOfDayReviewActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // This makes the Activity show over the lock screen and wakes the screen up
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
+        )
+
         enableEdgeToEdge()
         setContent {
             NightcheckTheme {

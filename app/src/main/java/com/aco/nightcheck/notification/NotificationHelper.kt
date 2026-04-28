@@ -1,14 +1,17 @@
 package com.nightcheck.notification
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.nightcheck.R
 import com.nightcheck.ui.MainActivity
+import com.nightcheck.ui.review.EndOfDayReviewActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,6 +54,7 @@ class NotificationHelper @Inject constructor(
 
     // ── Task reminder notification ────────────────────────────────────────────
 
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showTaskReminderNotification(taskId: Long, taskTitle: String) {
         val tapIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -74,8 +78,9 @@ class NotificationHelper @Inject constructor(
 
     // ── End-of-Day review notification ───────────────────────────────────────
 
+    @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showEndOfDayNotification(pendingCount: Int) {
-        val tapIntent = Intent(context, com.nightcheck.ui.review.EndOfDayReviewActivity::class.java).apply {
+        val tapIntent = Intent(context, EndOfDayReviewActivity::class.java).apply {
             // Ensure it launches as a fresh task over everything else
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }

@@ -39,9 +39,10 @@ fun NightcheckNavGraph(
             )
         }
 
-        // ── All Tasks ─────────────────────────────────────────────────────────
+        // ── Tasks ─────────────────────────────────────────────────────────────
         composable(route = Screen.Tasks.route) {
             TasksScreen(
+                // Added the missing onNavigateToAddTask callback here
                 onNavigateToAddTask = { navController.navigate(Screen.AddEditTask.route()) },
                 onNavigateToTask = { taskId ->
                     navController.navigate(Screen.AddEditTask.route(taskId))
@@ -52,6 +53,7 @@ fun NightcheckNavGraph(
         // ── Notes ─────────────────────────────────────────────────────────────
         composable(route = Screen.Notes.route) {
             NotesScreen(
+                // Added the missing onNavigateToAddNote callback here
                 onNavigateToAddNote = { navController.navigate(Screen.AddEditNote.route()) },
                 onNavigateToNote = { noteId ->
                     navController.navigate(Screen.AddEditNote.route(noteId))

@@ -6,6 +6,8 @@ import android.content.Intent
 import com.nightcheck.domain.repository.TaskRepository
 import com.nightcheck.notification.NotificationHelper
 import com.nightcheck.ui.review.EndOfDayReviewActivity
+import com.aco.nightcheck.util.AlarmScheduler
+import com.nightcheck.util.PreferencesManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,8 +22,9 @@ class EndOfDayReceiver : BroadcastReceiver() {
 
     @Inject lateinit var taskRepository: TaskRepository
     @Inject lateinit var notificationHelper: NotificationHelper
+    @Inject lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var alarmScheduler: AlarmScheduler
 
-    // Safe scope for async work inside BroadcastReceiver
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -33,12 +36,19 @@ class EndOfDayReceiver : BroadcastReceiver() {
                     .first()
 
                 if (pendingTasks.isNotEmpty()) {
-                    // Post notification that uses Full-Screen Intent to pop up
-                    notificationHelper.showEndOfDayNotification(pendingTasks.size)
+                    val reviewIntent = Intent(context, EndOfDayReviewActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    context.startActivity(reviewIntent)
 
-                    // DELETE the context.startActivity(reviewIntent) lines that used to be here!
+                    notificationHelper.showEndOfDayNotification(pendingTasks.size)
                 }
             } finally {
+                // Safely grab the saved time and schedule tomorrow's alarm
+                val hour = preferencesManager.endOfDayHour.first()
+                val minute = preferencesManager.endOfDayMinute.first()
+                alarmScheduler.scheduleEndOfDay(hour, minute)
+
                 pendingResult.finish()
             }
         }

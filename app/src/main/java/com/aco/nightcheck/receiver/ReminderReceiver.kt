@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.nightcheck.notification.NotificationHelper
-import com.nightcheck.util.AlarmScheduler
+import com.aco.nightcheck.util.AlarmScheduler
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
