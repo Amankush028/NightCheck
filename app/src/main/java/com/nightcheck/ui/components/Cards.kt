@@ -15,19 +15,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.toColorInt
 import com.nightcheck.domain.model.Note
 import com.nightcheck.domain.model.Priority
 import com.nightcheck.domain.model.Task
 import com.nightcheck.domain.model.TaskStatus
 import com.nightcheck.ui.theme.LocalNightcheckColors
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TaskCard
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun TaskCard(
@@ -40,8 +46,6 @@ fun TaskCard(
     val nc     = LocalNightcheckColors.current
     val scheme = MaterialTheme.colorScheme
 
-    // Stable lambda — only recreated when task.id or isDone changes,
-    // not on every parent recomposition. Avoids unnecessary child redraws.
     val onCheckboxClick = remember(task.id, isDone) {
         { onToggleStatus(if (isDone) TaskStatus.PENDING else TaskStatus.COMPLETED) }
     }
@@ -63,7 +67,9 @@ fun TaskCard(
         shape = RoundedCornerShape(24.dp)
     ) {
         Row(
-            modifier          = Modifier.fillMaxWidth().padding(20.dp),
+            modifier          = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -130,57 +136,255 @@ fun TaskCard(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  NoteCard — dispatches to Pinned or Regular variant
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
 fun NoteCard(
     note: Note,
     onClick: () -> Unit,
-    onTogglePin: (() -> Unit)? = null,
+    onTogglePin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scheme = MaterialTheme.colorScheme
-
-    // Parse hex only when colorHex changes — not every recomposition
-    val resolvedBg = remember(note.colorHex) {
-        note.colorHex?.let { Color(it.toColorInt()) }
+    if (note.isPinned) {
+        PinnedNoteCard(
+            note        = note,
+            onClick     = onClick,
+            onTogglePin = onTogglePin,
+            modifier    = modifier
+        )
+    } else {
+        RegularNoteCard(
+            note        = note,
+            onClick     = onClick,
+            onTogglePin = onTogglePin,
+            modifier    = modifier
+        )
     }
+}
 
-    Card(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = resolvedBg ?: scheme.surface),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text       = note.title.ifBlank { "Untitled" },
-                    fontSize   = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = scheme.onSurface,
-                    modifier   = Modifier.weight(1f),
-                    maxLines   = 1,
-                    overflow   = TextOverflow.Ellipsis
+// ─────────────────────────────────────────────────────────────────────────────
+//  Pinned note — full-width, purple gradient top accent line
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun PinnedNoteCard(
+    note: Note,
+    onClick: () -> Unit,
+    onTogglePin: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme      = MaterialTheme.colorScheme
+    val nc          = LocalNightcheckColors.current
+    val accentBrush = Brush.horizontalGradient(listOf(scheme.primary, nc.primaryDim))
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(scheme.surface)
+            .border(1.dp, nc.borderMuted, RoundedCornerShape(20.dp))
+            .clickable { onClick() }
+            .drawBehind {
+                drawRect(
+                    brush   = accentBrush,
+                    size    = Size(size.width, 2.dp.toPx()),
+                    topLeft = Offset.Zero
                 )
-                if (note.isPinned) {
+            }
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        Column {
+            // Title + unpin button
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.Top
+            ) {
+                Text(
+                    text     = note.title.ifBlank { "Untitled" },
+                    style    = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color      = scheme.onSurface
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(scheme.primaryContainer.copy(alpha = 0.4f))
+                        .clickable { onTogglePin() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector        = Icons.Default.PushPin,
-                        contentDescription = "Pinned",
+                        Icons.Default.PushPin,
+                        contentDescription = "Unpin",
                         tint               = scheme.primary,
-                        modifier           = Modifier.size(16.dp)
+                        modifier           = Modifier.size(13.dp)
                     )
                 }
             }
+
+            // Body preview
             if (note.body.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text       = note.body,
-                    fontSize   = 13.sp,
-                    color      = scheme.onSurfaceVariant,
-                    fontWeight = if (note.isBold) FontWeight.Bold else FontWeight.Normal,
-                    fontStyle  = if (note.isItalic) FontStyle.Italic else FontStyle.Normal,
-                    maxLines   = 3,
-                    overflow   = TextOverflow.Ellipsis
+                    text     = note.body,
+                    style    = MaterialTheme.typography.bodySmall.copy(
+                        color      = nc.textMuted,
+                        lineHeight = 20.sp
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+            }
+
+            // Date + tag
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Text(
+                    text  = formatNoteDate(note),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color      = nc.textFaint,
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+                if (note.colorHex != null) {
+                    NoteTagChip(label = "Pinned")
+                }
             }
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Regular note — compact grid/list card
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun RegularNoteCard(
+    note: Note,
+    onClick: () -> Unit,
+    onTogglePin: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    val nc     = LocalNightcheckColors.current
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(scheme.surface)
+            .border(1.dp, nc.borderMuted, RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+            .padding(16.dp)
+    ) {
+        Text(
+            text     = note.title.ifBlank { "Untitled" },
+            style    = MaterialTheme.typography.titleSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                color      = scheme.onSurface,
+                fontSize   = 14.sp
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Render multiline body as individual lines (list-style), single body as a block
+        val bodyLines = note.body.split("\n").filter { it.isNotBlank() }.take(4)
+        if (bodyLines.size > 1) {
+            bodyLines.forEach { line ->
+                Text(
+                    text     = line,
+                    style    = MaterialTheme.typography.bodySmall.copy(
+                        color      = nc.textMuted,
+                        lineHeight = 22.sp
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        } else {
+            Text(
+                text     = note.body,
+                style    = MaterialTheme.typography.bodySmall.copy(
+                    color      = nc.textMuted,
+                    lineHeight = 20.sp
+                ),
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically
+        ) {
+            Text(
+                text  = formatNoteDate(note),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color      = nc.textFaint,
+                    fontSize   = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            )
+            Icon(
+                Icons.Default.PushPin,
+                contentDescription = "Pin note",
+                tint               = nc.textFaint,
+                modifier           = Modifier
+                    .size(14.dp)
+                    .clickable { onTogglePin() }
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Tag chip
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun NoteTagChip(label: String) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(scheme.primaryContainer.copy(alpha = 0.3f))
+            .border(1.dp, scheme.primary.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text  = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight    = FontWeight.SemiBold,
+                fontSize      = 10.sp,
+                letterSpacing = 0.5.sp,
+                color         = scheme.primary
+            )
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Date formatter — wire up note.updatedAt / createdAt when available
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun formatNoteDate(note: Note): String {
+    return "Today" // Replace with: note.updatedAt.format(DateTimeFormatter...) etc.
 }
