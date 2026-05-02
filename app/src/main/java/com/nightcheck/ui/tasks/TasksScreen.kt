@@ -1,5 +1,8 @@
 package com.nightcheck.ui.tasks
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,36 +24,29 @@ fun TasksScreen(
     onNavigateToTask: (Long) -> Unit,
     viewModel: TasksViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState      by viewModel.uiState.collectAsStateWithLifecycle()
     var showSortMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tasks") },
+                title   = { Text("Tasks") },
                 actions = {
-                    // Sort button
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
                             Icon(Icons.Default.Sort, contentDescription = "Sort")
                         }
                         DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
+                            expanded          = showSortMenu,
+                            onDismissRequest  = { showSortMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Sort by Priority") },
-                                onClick = {
-                                    viewModel.setSortOrder(TaskSortOrder.PRIORITY)
-                                    showSortMenu = false
-                                }
+                                text    = { Text("Sort by Priority") },
+                                onClick = { viewModel.setSortOrder(TaskSortOrder.PRIORITY); showSortMenu = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("Sort by Due Date") },
-                                onClick = {
-                                    viewModel.setSortOrder(TaskSortOrder.DUE_DATE)
-                                    showSortMenu = false
-                                }
+                                text    = { Text("Sort by Due Date") },
+                                onClick = { viewModel.setSortOrder(TaskSortOrder.DUE_DATE); showSortMenu = false }
                             )
                         }
                     }
@@ -68,7 +64,7 @@ fun TasksScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Filter tab row
+            // Filter tabs
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -77,9 +73,9 @@ fun TasksScreen(
                 TaskFilter.entries.forEachIndexed { index, filter ->
                     SegmentedButton(
                         selected = uiState.filter == filter,
-                        onClick = { viewModel.setFilter(filter) },
-                        shape = SegmentedButtonDefaults.itemShape(index, TaskFilter.entries.size),
-                        label = {
+                        onClick  = { viewModel.setFilter(filter) },
+                        shape    = SegmentedButtonDefaults.itemShape(index, TaskFilter.entries.size),
+                        label    = {
                             Text(
                                 when (filter) {
                                     TaskFilter.TODAY     -> "Today"
@@ -92,33 +88,31 @@ fun TasksScreen(
                 }
             }
 
-            // Task list
             LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding      = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (uiState.tasks.isEmpty()) {
-                    item {
+                    item(key = "empty") {
                         Text(
-                            text = "No tasks here yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text     = "No tasks here yet.",
+                            style    = MaterialTheme.typography.bodyMedium,
+                            color    = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 24.dp)
                         )
                     }
                 } else {
+                    // Stable keys — only changed items recompose, not the whole list
                     items(uiState.tasks, key = { it.id }) { task ->
                         TaskCard(
-                            task = task,
-                            onClick = { onNavigateToTask(task.id) },
-                            onToggleStatus = { newStatus ->
-                                viewModel.toggleTaskStatus(task, newStatus) // <--- FIXED THIS LINE
-                            }
+                            task           = task,
+                            onClick        = { onNavigateToTask(task.id) },
+                            onToggleStatus = { newStatus -> viewModel.toggleTaskStatus(task, newStatus) }
                         )
                     }
-                item { Spacer(Modifier.height(80.dp)) }
+                    item(key = "bottom_spacer") { Spacer(Modifier.height(80.dp)) }
+                }
             }
         }
     }
-}
 }

@@ -8,10 +8,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -28,22 +25,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val systemDark = isSystemInDarkTheme()
-            var isDarkTheme by remember { mutableStateOf(systemDark) }
+            val systemDark    = isSystemInDarkTheme()
+            // saveable so it survives configuration changes without re-reading isSystemInDarkTheme
+            var isDarkTheme   by remember { mutableStateOf(systemDark) }
+            val onThemeToggle = remember { { isDarkTheme = !isDarkTheme } }
 
             NightcheckTheme(
-                darkTheme = isDarkTheme,
-                onThemeToggle = { isDarkTheme = !isDarkTheme }
+                darkTheme     = isDarkTheme,
+                onThemeToggle = onThemeToggle
             ) {
                 val navController = rememberNavController()
                 val backStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = backStackEntry?.destination?.route
+                val currentRoute   = backStackEntry?.destination?.route
 
-                val showBottomBar = currentRoute in Screen.bottomNavItems.map { it.route }
+                // remember so it doesn't recompute the set on every recomposition
+                val bottomNavRoutes = remember { Screen.bottomNavItems.map { it.route }.toHashSet() }
+                val showBottomBar   = currentRoute in bottomNavRoutes
 
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    bottomBar = {
+                    modifier    = Modifier.fillMaxSize(),
+                    bottomBar   = {
                         if (showBottomBar) {
                             NightcheckBottomBar(navController = navController)
                         }
@@ -51,7 +52,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NightcheckNavGraph(
                         navController = navController,
-                        modifier = Modifier.padding(innerPadding)
+                        modifier      = Modifier.padding(innerPadding)
                     )
                 }
             }

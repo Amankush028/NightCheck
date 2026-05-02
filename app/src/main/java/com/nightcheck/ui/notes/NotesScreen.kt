@@ -1,9 +1,9 @@
 package com.nightcheck.ui.notes
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.GridView
@@ -15,9 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nightcheck.ui.components.NoteCard
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,17 +23,22 @@ fun NotesScreen(
     onNavigateToNote: (Long) -> Unit,
     viewModel: NotesViewModel = hiltViewModel()
 ) {
-    val notes by viewModel.notes.collectAsStateWithLifecycle()
-    var isGridView by remember { mutableStateOf(true) }
+    val notes       by viewModel.notes.collectAsStateWithLifecycle()
+    var isGridView  by remember { mutableStateOf(true) }
+
+    // Remember column count so it doesn't recalculate on every recomposition
+    val columns = remember(isGridView) {
+        StaggeredGridCells.Fixed(if (isGridView) 2 else 1)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notes") },
+                title   = { Text("Notes") },
                 actions = {
                     IconButton(onClick = { isGridView = !isGridView }) {
                         Icon(
-                            imageVector = if (isGridView) Icons.Default.List else Icons.Default.GridView,
+                            imageVector        = if (isGridView) Icons.Default.List else Icons.Default.GridView,
                             contentDescription = if (isGridView) "List view" else "Grid view"
                         )
                     }
@@ -64,19 +66,20 @@ fun NotesScreen(
             }
         } else {
             LazyVerticalStaggeredGrid(
-                columns = StaggeredGridCells.Fixed(if (isGridView) 2 else 1),
-                modifier = Modifier
+                columns             = columns,
+                modifier            = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp), // <--- FIXED THIS LINE
+                contentPadding      = PaddingValues(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalItemSpacing = 8.dp
             ) {
+                // Stable key — only changed notes recompose
                 items(notes, key = { it.id }) { note ->
                     NoteCard(
-                        note = note,
-                        onClick = { onNavigateToNote(note.id) },
-                        onTogglePin = { viewModel.togglePin(note) }
+                        note         = note,
+                        onClick      = { onNavigateToNote(note.id) },
+                        onTogglePin  = { viewModel.togglePin(note) }
                     )
                 }
             }

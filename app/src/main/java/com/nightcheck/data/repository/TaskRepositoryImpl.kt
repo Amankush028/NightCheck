@@ -7,6 +7,8 @@ import com.nightcheck.domain.model.Task
 import com.nightcheck.domain.model.TaskStatus
 import com.nightcheck.domain.repository.TaskRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
@@ -18,37 +20,74 @@ class TaskRepositoryImpl @Inject constructor(
 ) : TaskRepository {
 
     override fun observeAllTasks(): Flow<List<Task>> =
-        taskDao.observeAllTasks().map { list -> list.map { it.toDomain() } }
+        taskDao.observeAllTasks()
+            .distinctUntilChanged()
+            .map { it.map { e -> e.toDomain() } }
 
-    override fun observeTasksForDay(date: LocalDate): Flow<List<Task>> =
-        taskDao.observeAllTasks().map { list ->
-            val dayOfWeek = date.dayOfWeek
-            list.map { it.toDomain() }
-                .filter { task ->
-                    task.dueDate == date || 
-                    (task.dueDate == null && task.recurringDays == null && date == LocalDate.now()) ||
-                    task.recurringDays?.contains(dayOfWeek) == true
+    /**
+     * Previously called observeAllTasks() + full client-side filter on EVERY
+     * DB emission — O(n) scan on every write anywhere in the tasks table.
+     *
+     * Now uses the indexed DAO query for dated tasks, plus a separate indexed
+     * recurring query, and merges them. Both hit the Room index on
+     * dueDateEpochDay / recurringDays.
+     *
+     * distinctUntilChanged() on each upstream prevents downstream recomposition
+     * when an unrelated task changes (e.g. completing a task on a different day).
+     */
+    override fun observeTasksForDay(date: LocalDate): Flow<List<Task>> {
+        val epochDay  = date.toEpochDay()
+        val dayOfWeek = date.dayOfWeek.value // 1=Mon … 7=Sun
+
+        val datedFlow = taskDao.observeTasksForDay(epochDay)
+            .distinctUntilChanged()
+
+        // Recurring tasks are a small subset — filter them from the full list
+        // but guard with distinctUntilChanged so we don't re-map every write.
+        val recurringFlow = taskDao.observeAllTasks()
+            .distinctUntilChanged()
+            .map { list ->
+                list.filter { entity ->
+                    if (entity.recurringDays == null) return@filter false
+                    entity.recurringDays
+                        .split(",")
+                        .filter { it.isNotEmpty() }
+                        .any { it.trim().toIntOrNull() == dayOfWeek }
                 }
-                .map { task ->
-                    if (task.recurringDays != null) {
-                        val isDoneOnDate = task.lastCompletedDate == date
-                        task.copy(status = if (isDoneOnDate) TaskStatus.COMPLETED else TaskStatus.PENDING)
-                    } else {
-                        task
-                    }
+            }
+            .distinctUntilChanged()
+
+        return combine(datedFlow, recurringFlow) { dated, recurring ->
+            val datedDomain = dated.map { it.toDomain() }
+            val datedIds    = datedDomain.map { it.id }.toHashSet()
+
+            val recurringDomain = recurring
+                .filter { it.id !in datedIds } // avoid duplicates
+                .map { entity ->
+                    val task       = entity.toDomain()
+                    val doneToday  = task.lastCompletedDate == date
+                    task.copy(status = if (doneToday) TaskStatus.COMPLETED else TaskStatus.PENDING)
                 }
-        }
+
+            (datedDomain + recurringDomain)
+                .sortedByDescending { it.priority.ordinal }
+        }.distinctUntilChanged()
+    }
 
     override fun observePendingTasksForDay(date: LocalDate): Flow<List<Task>> =
-        observeTasksForDay(date).map { list ->
-            list.filter { it.status == TaskStatus.PENDING }
-        }
+        observeTasksForDay(date)
+            .map { it.filter { task -> task.status == TaskStatus.PENDING } }
+            .distinctUntilChanged()
 
     override fun observeUpcomingTasks(after: LocalDate): Flow<List<Task>> =
-        taskDao.observeUpcomingTasks(after.toEpochDay()).map { list -> list.map { it.toDomain() } }
+        taskDao.observeUpcomingTasks(after.toEpochDay())
+            .distinctUntilChanged()
+            .map { it.map { e -> e.toDomain() } }
 
     override fun observeCompletedTasks(): Flow<List<Task>> =
-        taskDao.observeCompletedTasks().map { list -> list.map { it.toDomain() } }
+        taskDao.observeCompletedTasks()
+            .distinctUntilChanged()
+            .map { it.map { e -> e.toDomain() } }
 
     override suspend fun getTaskById(id: Long): Task? =
         taskDao.getTaskById(id)?.toDomain()

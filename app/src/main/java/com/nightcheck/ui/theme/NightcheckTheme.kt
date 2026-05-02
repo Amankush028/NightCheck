@@ -7,80 +7,188 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-val PurplePrimary = Color(0xFFA78BFA) // Lighter, more vibrant purple from image
-val DarkBackground = Color(0xFF000000) // Pure black for the dark theme in image
-val CardBackground = Color(0xFF111111)
+// ─────────────────────────────────────────────────────────────────────────────
+//  SINGLE SOURCE OF TRUTH — all colors are defined here ONLY.
+//  Every screen/component must use MaterialTheme.colorScheme.* or the
+//  NightcheckColors extensions below. No hardcoded Color(...) anywhere else.
+// ─────────────────────────────────────────────────────────────────────────────
 
-val LocalThemeToggle = compositionLocalOf<() -> Unit> { {} }
-val LocalIsDarkTheme = compositionLocalOf<Boolean> { false }
+// ── Dark palette ──────────────────────────────────────────────────────────────
+// Source of truth: HomeScreen dark aesthetic
+private object Dark {
+    val Background     = Color(0xFF000000) // Pure black — main background
+    val Surface        = Color(0xFF111111) // Task cards, note cards
+    val SurfaceVariant = Color(0xFF1C1C24) // Input fields, inner cards, toggles
+    val SurfaceHigh    = Color(0xFF262438) // Icon backgrounds, elevated surfaces
+    val Overlay        = Color(0xFF322F44) // Selected toggle pill, chip backgrounds
 
-private val md_theme_dark_primary            = PurplePrimary
-private val md_theme_dark_onPrimary          = Color(0xFFFFFFFF)
-private val md_theme_dark_primaryContainer   = Color(0xFF5D4EC4)
-private val md_theme_dark_onPrimaryContainer = Color(0xFFFFFFFF)
-private val md_theme_dark_background         = DarkBackground
-private val md_theme_dark_onBackground       = Color(0xFFFFFFFF)
-private val md_theme_dark_surface            = CardBackground
-private val md_theme_dark_onSurface          = Color(0xFFFFFFFF)
-private val md_theme_dark_surfaceVariant     = Color(0xFF1C1C24)
-private val md_theme_dark_onSurfaceVariant   = Color(0xFFAAAAAA)
-private val md_theme_dark_outline            = Color(0x26FFFFFF)
-private val md_theme_dark_error              = Color(0xFFF2B8B8)
-private val md_theme_dark_errorContainer     = Color(0xFF8C1D18)
-private val md_theme_dark_onError            = Color(0xFF601410)
-private val md_theme_dark_onErrorContainer   = Color(0xFFF9DEDC)
+    val Primary        = Color(0xFFA78BFA) // Purple — main accent
+    val PrimaryDim     = Color(0xFF7C6AF5) // Deeper purple — buttons, FAB
+    val PrimaryMuted   = Color(0xFF5D4EC4) // Primary container
 
-private val md_theme_light_primary            = Color(0xFF6366F1)
-private val md_theme_light_onPrimary          = Color(0xFFFFFFFF)
-private val md_theme_light_primaryContainer   = Color(0xFFEADDFF)
-private val md_theme_light_onPrimaryContainer = Color(0xFF21005D)
-private val md_theme_light_background         = Color(0xFFF9FAFB)
-private val md_theme_light_onBackground       = Color(0xFF111827)
-private val md_theme_light_surface            = Color(0xFFFFFFFF)
-private val md_theme_light_onSurface          = Color(0xFF111827)
-private val md_theme_light_surfaceVariant     = Color(0xFFF3F4F6)
-private val md_theme_light_onSurfaceVariant   = Color(0xFF6B7280)
-private val md_theme_light_outline            = Color(0x26000000)
-private val md_theme_light_error              = Color(0xFFB3261E)
-private val md_theme_light_errorContainer     = Color(0xFFF9DEDC)
-private val md_theme_light_onError            = Color(0xFFFFFFFF)
-private val md_theme_light_onErrorContainer   = Color(0xFF410E0B)
+    val OnBackground   = Color(0xFFFFFFFF)
+    val OnSurface      = Color(0xFFFFFFFF)
+    val OnSurfaceVar   = Color(0xFFAAAAAA)
+    val OnPrimary      = Color(0xFFFFFFFF)
+    val Outline        = Color(0x26FFFFFF) // ~15% white border
 
-private val LightColorScheme = lightColorScheme(
-    primary = md_theme_light_primary,
-    onPrimary = md_theme_light_onPrimary,
-    primaryContainer = md_theme_light_primaryContainer,
-    onPrimaryContainer = md_theme_light_onPrimaryContainer,
-    background = md_theme_light_background,
-    onBackground = md_theme_light_onBackground,
-    surface = md_theme_light_surface,
-    onSurface = md_theme_light_onSurface,
-    surfaceVariant = md_theme_light_surfaceVariant,
-    onSurfaceVariant = md_theme_light_onSurfaceVariant,
-    outline = md_theme_light_outline,
-    error = md_theme_light_error,
-    errorContainer = md_theme_light_errorContainer,
-    onError = md_theme_light_onError,
-    onErrorContainer = md_theme_light_onErrorContainer
+    val Error          = Color(0xFFF2B8B8)
+    val ErrorContainer = Color(0xFF8C1D18)
+    val OnError        = Color(0xFF601410)
+    val OnErrorCont    = Color(0xFFF9DEDC)
+
+    // Semantic extras exposed via NightcheckColors
+    val ReviewBg       = Color(0xFF1A1235)  // EndOfDayReview wallpaper tint
+    val ReviewSheet    = Color(0xEB161226)  // Review bottom sheet bg
+    val TextMuted      = Color(0x59FFFFFF)  // ~35% white — secondary text
+    val TextFaint      = Color(0x33FFFFFF)  // ~20% white — placeholder / label
+    val BorderMuted    = Color(0x1AFFFFFF)  // ~10% white — dividers
+    val Destructive    = Color(0xFFE57373)  // Delete / destructive action
+}
+
+// ── Light palette ─────────────────────────────────────────────────────────────
+// Warm cream/ivory with amber-orange replacing purple for a complementary feel
+private object Light {
+    val Background     = Color(0xFFFEFAF3) // Warm ivory — main background
+    val Surface        = Color(0xFFFFFFFF) // Cards on cream
+    val SurfaceVariant = Color(0xFFF5EFE3) // Input fields, inner cards
+    val SurfaceHigh    = Color(0xFFEDE4D3) // Elevated surfaces, icon bg
+    val Overlay        = Color(0xFFE8DCC8) // Selected toggle pill
+
+    val Primary        = Color(0xFFD97706) // Amber-orange — main accent
+    val PrimaryDim     = Color(0xFFB45309) // Deeper amber — buttons, FAB
+    val PrimaryMuted   = Color(0xFFFDE68A) // Primary container (soft yellow)
+
+    val OnBackground   = Color(0xFF1C1006) // Near-black warm
+    val OnSurface      = Color(0xFF1C1006)
+    val OnSurfaceVar   = Color(0xFF6B5C3E) // Warm brown-grey
+    val OnPrimary      = Color(0xFFFFFFFF)
+    val Outline        = Color(0x26000000) // ~15% black border
+
+    val Error          = Color(0xFFB3261E)
+    val ErrorContainer = Color(0xFFF9DEDC)
+    val OnError        = Color(0xFFFFFFFF)
+    val OnErrorCont    = Color(0xFF410E0B)
+
+    // Semantic extras
+    val ReviewBg       = Color(0xFFF5EAD3)  // EndOfDayReview wallpaper tint
+    val ReviewSheet    = Color(0xF0FFFBF2)  // Review bottom sheet bg
+    val TextMuted      = Color(0x996B5C3E)  // ~60% warm brown
+    val TextFaint      = Color(0x4D6B5C3E)  // ~30% warm brown
+    val BorderMuted    = Color(0x1A000000)  // ~10% black
+    val Destructive    = Color(0xFFE57373)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  NightcheckColors — semantic extras not covered by Material3 ColorScheme.
+//  Access via LocalNightcheckColors.current in any Composable.
+// ─────────────────────────────────────────────────────────────────────────────
+
+data class NightcheckColors(
+    /** Deeper/dimmer shade of primary for buttons & FABs */
+    val primaryDim: Color,
+    /** Muted primary for overlay / selected-pill backgrounds */
+    val overlay: Color,
+    /** Elevated icon-background surface */
+    val surfaceHigh: Color,
+    /** Wallpaper tint for EndOfDayReview activity */
+    val reviewBg: Color,
+    /** Bottom-sheet background in EndOfDayReview */
+    val reviewSheet: Color,
+    /** ~35% opacity text — secondary labels */
+    val textMuted: Color,
+    /** ~20% opacity text — placeholders, faint labels */
+    val textFaint: Color,
+    /** Thin border / divider color */
+    val borderMuted: Color,
+    /** Destructive action color (delete, error buttons) */
+    val destructive: Color,
 )
+
+val LocalNightcheckColors = compositionLocalOf {
+    NightcheckColors(
+        primaryDim   = Dark.PrimaryDim,
+        overlay      = Dark.Overlay,
+        surfaceHigh  = Dark.SurfaceHigh,
+        reviewBg     = Dark.ReviewBg,
+        reviewSheet  = Dark.ReviewSheet,
+        textMuted    = Dark.TextMuted,
+        textFaint    = Dark.TextFaint,
+        borderMuted  = Dark.BorderMuted,
+        destructive  = Dark.Destructive,
+    )
+}
+
+val LocalThemeToggle  = compositionLocalOf<() -> Unit> { {} }
+val LocalIsDarkTheme  = compositionLocalOf<Boolean> { true }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Material3 ColorScheme instances
+// ─────────────────────────────────────────────────────────────────────────────
 
 private val DarkColorScheme = darkColorScheme(
-    primary = md_theme_dark_primary,
-    onPrimary = md_theme_dark_onPrimary,
-    primaryContainer = md_theme_dark_primaryContainer,
-    onPrimaryContainer = md_theme_dark_onPrimaryContainer,
-    background = md_theme_dark_background,
-    onBackground = md_theme_dark_onBackground,
-    surface = md_theme_dark_surface,
-    onSurface = md_theme_dark_onSurface,
-    surfaceVariant = md_theme_dark_surfaceVariant,
-    onSurfaceVariant = md_theme_dark_onSurfaceVariant,
-    outline = md_theme_dark_outline,
-    error = md_theme_dark_error,
-    errorContainer = md_theme_dark_errorContainer,
-    onError = md_theme_dark_onError,
-    onErrorContainer = md_theme_dark_onErrorContainer
+    primary             = Dark.Primary,
+    onPrimary           = Dark.OnPrimary,
+    primaryContainer    = Dark.PrimaryMuted,
+    onPrimaryContainer  = Dark.OnPrimary,
+    background          = Dark.Background,
+    onBackground        = Dark.OnBackground,
+    surface             = Dark.Surface,
+    onSurface           = Dark.OnSurface,
+    surfaceVariant      = Dark.SurfaceVariant,
+    onSurfaceVariant    = Dark.OnSurfaceVar,
+    outline             = Dark.Outline,
+    error               = Dark.Error,
+    errorContainer      = Dark.ErrorContainer,
+    onError             = Dark.OnError,
+    onErrorContainer    = Dark.OnErrorCont,
 )
+
+private val LightColorScheme = lightColorScheme(
+    primary             = Light.Primary,
+    onPrimary           = Light.OnPrimary,
+    primaryContainer    = Light.PrimaryMuted,
+    onPrimaryContainer  = Light.OnBackground,
+    background          = Light.Background,
+    onBackground        = Light.OnBackground,
+    surface             = Light.Surface,
+    onSurface           = Light.OnSurface,
+    surfaceVariant      = Light.SurfaceVariant,
+    onSurfaceVariant    = Light.OnSurfaceVar,
+    outline             = Light.Outline,
+    error               = Light.Error,
+    errorContainer      = Light.ErrorContainer,
+    onError             = Light.OnError,
+    onErrorContainer    = Light.OnErrorCont,
+)
+
+private val DarkNightcheckColors = NightcheckColors(
+    primaryDim  = Dark.PrimaryDim,
+    overlay     = Dark.Overlay,
+    surfaceHigh = Dark.SurfaceHigh,
+    reviewBg    = Dark.ReviewBg,
+    reviewSheet = Dark.ReviewSheet,
+    textMuted   = Dark.TextMuted,
+    textFaint   = Dark.TextFaint,
+    borderMuted = Dark.BorderMuted,
+    destructive = Dark.Destructive,
+)
+
+private val LightNightcheckColors = NightcheckColors(
+    primaryDim  = Light.PrimaryDim,
+    overlay     = Light.Overlay,
+    surfaceHigh = Light.SurfaceHigh,
+    reviewBg    = Light.ReviewBg,
+    reviewSheet = Light.ReviewSheet,
+    textMuted   = Light.TextMuted,
+    textFaint   = Light.TextFaint,
+    borderMuted = Light.BorderMuted,
+    destructive = Light.Destructive,
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Theme entry point
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun NightcheckTheme(
@@ -88,16 +196,18 @@ fun NightcheckTheme(
     onThemeToggle: () -> Unit = {},
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val colorScheme      = if (darkTheme) DarkColorScheme      else LightColorScheme
+    val nightcheckColors = if (darkTheme) DarkNightcheckColors else LightNightcheckColors
 
     CompositionLocalProvider(
-        LocalIsDarkTheme provides darkTheme,
-        LocalThemeToggle provides onThemeToggle
+        LocalIsDarkTheme        provides darkTheme,
+        LocalThemeToggle        provides onThemeToggle,
+        LocalNightcheckColors   provides nightcheckColors,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = NightcheckTypography,
-            content = content
+            typography  = NightcheckTypography,
+            content     = content
         )
     }
 }

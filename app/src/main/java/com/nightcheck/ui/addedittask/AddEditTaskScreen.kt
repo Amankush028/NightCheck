@@ -18,13 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nightcheck.domain.model.Priority
+import com.nightcheck.ui.theme.LocalNightcheckColors
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -39,8 +39,10 @@ fun AddEditTaskScreen(
     onNavigateUp: () -> Unit,
     viewModel: AddEditTaskViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val isEditing = taskId != null
+    val uiState   by viewModel.uiState.collectAsStateWithLifecycle()
+    val isEditing  = taskId != null
+    val nc         = LocalNightcheckColors.current
+    val scheme     = MaterialTheme.colorScheme
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) onNavigateUp()
@@ -54,20 +56,16 @@ fun AddEditTaskScreen(
         }
     }
 
-    // Delete confirmation dialog state
     var showDeleteDialog by remember { mutableStateOf(false) }
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Delete Task") },
-            text = { Text("Are you sure you want to delete this task? This cannot be undone.") },
+            text  = { Text("Are you sure you want to delete this task? This cannot be undone.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        viewModel.delete()
-                    }
-                ) { Text("Delete", color = Color(0xFFE57373)) }
+                TextButton(onClick = { showDeleteDialog = false; viewModel.delete() }) {
+                    Text("Delete", color = nc.destructive)
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
@@ -89,20 +87,23 @@ fun AddEditTaskScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = scheme.onBackground
+                        )
                     }
                 },
                 actions = {
-                    // Delete button — only shown when editing an existing task
                     if (isEditing) {
                         IconButton(
-                            onClick = { showDeleteDialog = true },
-                            enabled = !uiState.isLoading
+                            onClick  = { showDeleteDialog = true },
+                            enabled  = !uiState.isLoading
                         ) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Delete task",
-                                tint = Color(0xFFE57373)
+                                tint = nc.destructive
                             )
                         }
                     }
@@ -110,18 +111,18 @@ fun AddEditTaskScreen(
                         Text(
                             "Save",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = Color(0xFF7C6AF5)
+                            color = scheme.primary
                         )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.White
+                    containerColor    = scheme.background,
+                    titleContentColor = scheme.onBackground
                 )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color(0xFF0E0E12)
+        snackbarHost    = { SnackbarHost(snackbarHostState) },
+        containerColor  = scheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -131,56 +132,49 @@ fun AddEditTaskScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
-            // Title Field
             Column {
                 SectionLabel("TITLE *")
                 TransparentTextField(
-                    value = uiState.title,
+                    value         = uiState.title,
                     onValueChange = viewModel::onTitleChange,
-                    placeholder = "What needs to be done?",
-                    singleLine = true
+                    placeholder   = "What needs to be done?",
+                    singleLine    = true
                 )
             }
 
-            // Description Field
             Column {
                 SectionLabel("DESCRIPTION")
                 TransparentTextField(
-                    value = uiState.description,
+                    value         = uiState.description,
                     onValueChange = viewModel::onDescriptionChange,
-                    placeholder = "Add more details...",
-                    minLines = 1
+                    placeholder   = "Add more details...",
+                    minLines      = 1
                 )
             }
 
-            // Schedule Section
             ScheduleSection(
-                dueDate = uiState.dueDate,
-                recurringTime = uiState.recurringTime,
+                dueDate              = uiState.dueDate,
+                recurringTime        = uiState.recurringTime,
                 onScheduleModeChange = viewModel::onScheduleModeChange,
-                onDateSelected = viewModel::onDueDateChange,
+                onDateSelected       = viewModel::onDueDateChange,
                 onRecurringTimeChange = viewModel::onRecurringTimeChange
             )
 
-            // Priority Section
             PrioritySection(
-                selectedPriority = uiState.priority,
+                selectedPriority  = uiState.priority,
                 onPrioritySelected = viewModel::onPriorityChange
             )
 
-            // Reminder Section
             ReminderSection(
-                reminderTime = uiState.reminderTime,
+                reminderTime  = uiState.reminderTime,
                 onTimeSelected = viewModel::onReminderTimeChange
             )
 
             if (uiState.isLoading) {
                 LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp),
-                    color = Color(0xFF7C6AF5),
-                    trackColor = Color.White.copy(alpha = 0.1f)
+                    modifier   = Modifier.fillMaxWidth().height(2.dp),
+                    color      = scheme.primary,
+                    trackColor = scheme.outline
                 )
             }
         }
@@ -189,13 +183,14 @@ fun AddEditTaskScreen(
 
 @Composable
 private fun SectionLabel(text: String) {
+    val nc = LocalNightcheckColors.current
     Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(
+        text     = text,
+        style    = MaterialTheme.typography.labelSmall.copy(
             letterSpacing = 1.2.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight    = FontWeight.Bold
         ),
-        color = Color.White.copy(alpha = 0.4f),
+        color    = nc.textFaint,
         modifier = Modifier.padding(bottom = 12.dp)
     )
 }
@@ -208,28 +203,30 @@ private fun TransparentTextField(
     singleLine: Boolean = false,
     minLines: Int = 1
 ) {
+    val nc     = LocalNightcheckColors.current
+    val scheme = MaterialTheme.colorScheme
     TextField(
-        value = value,
+        value         = value,
         onValueChange = onValueChange,
-        placeholder = {
+        placeholder   = {
             Text(
                 placeholder,
-                color = Color.White.copy(alpha = 0.2f),
+                color = nc.textFaint,
                 style = MaterialTheme.typography.bodyLarge
             )
         },
-        modifier = Modifier.fillMaxWidth(),
+        modifier   = Modifier.fillMaxWidth(),
         singleLine = singleLine,
-        minLines = minLines,
-        colors = TextFieldDefaults.colors(
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent,
-            cursorColor = Color(0xFF7C6AF5),
-            focusedIndicatorColor = Color.White.copy(alpha = 0.1f),
-            unfocusedIndicatorColor = Color.White.copy(alpha = 0.1f)
+        minLines   = minLines,
+        colors     = TextFieldDefaults.colors(
+            focusedTextColor        = scheme.onBackground,
+            unfocusedTextColor      = scheme.onBackground,
+            focusedContainerColor   = androidx.compose.ui.graphics.Color.Transparent,
+            unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+            disabledContainerColor  = androidx.compose.ui.graphics.Color.Transparent,
+            cursorColor             = scheme.primary,
+            focusedIndicatorColor   = scheme.outline,
+            unfocusedIndicatorColor = scheme.outline
         ),
         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp)
     )
@@ -244,6 +241,8 @@ private fun ScheduleSection(
     onRecurringTimeChange: (LocalTime?) -> Unit
 ) {
     val isRecurring = recurringTime != null
+    val nc          = LocalNightcheckColors.current
+    val scheme      = MaterialTheme.colorScheme
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -255,7 +254,7 @@ private fun ScheduleSection(
             ?.toEpochMilli()
     )
     val timePickerState = rememberTimePickerState(
-        initialHour = recurringTime?.hour ?: 9,
+        initialHour   = recurringTime?.hour ?: 9,
         initialMinute = recurringTime?.minute ?: 0
     )
 
@@ -263,139 +262,94 @@ private fun ScheduleSection(
         SectionLabel("SCHEDULE")
 
         CustomToggleRow(
-            options = listOf("One-time", "Recurring"),
-            selectedIndex = if (isRecurring) 1 else 0,
+            options         = listOf("One-time", "Recurring"),
+            selectedIndex   = if (isRecurring) 1 else 0,
             onOptionSelected = { index -> onScheduleModeChange(index == 1) }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (isRecurring) {
-            // Recurring mode — show a tappable time card
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { showTimePicker = true },
-                color = Color(0xFF1C1C24)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { if (isRecurring) showTimePicker = true else showDatePicker = true },
+            color = scheme.surfaceVariant
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                if (isRecurring) {
                     Column {
                         Text(
                             "Repeats daily at",
                             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
-                            color = Color.White.copy(alpha = 0.4f)
+                            color = nc.textFaint
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            recurringTime?.format(DateTimeFormatter.ofPattern("h:mm a"))
-                                ?: "Set time",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = Color.White
+                            recurringTime?.format(DateTimeFormatter.ofPattern("h:mm a")) ?: "Set time",
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF322F44))
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            "Change",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = Color(0xFF7C6AF5)
-                        )
-                    }
-                }
-            }
-        } else {
-            // One-time mode — styled date card with day, weekday, and month/year
-            val today = LocalDate.now()
-            val tomorrow = today.plusDays(1)
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .clickable { showDatePicker = true },
-                color = Color(0xFF1C1C24)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                } else {
+                    val today    = LocalDate.now()
+                    val tomorrow = today.plusDays(1)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Large day-of-month number
                         Text(
-                            text = dueDate?.dayOfMonth?.toString() ?: "--",
-                            style = MaterialTheme.typography.displaySmall.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = Color(0xFF7C6AF5)
+                            text  = dueDate?.dayOfMonth?.toString() ?: "--",
+                            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
                         )
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
-                            // Friendly label: Today / Tomorrow / weekday name
                             val label = when (dueDate) {
                                 today    -> "Today"
                                 tomorrow -> "Tomorrow"
-                                else     -> dueDate?.format(DateTimeFormatter.ofPattern("EEEE"))
-                                    ?: "Pick a date"
+                                else     -> dueDate?.format(DateTimeFormatter.ofPattern("EEEE")) ?: "Pick a date"
                             }
                             Text(
-                                text = label,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = Color.White
+                                text  = label,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
                             )
                             Text(
-                                text = dueDate?.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
-                                    ?: "",
+                                text  = dueDate?.format(DateTimeFormatter.ofPattern("MMMM yyyy")) ?: "",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.4f)
+                                color = nc.textFaint
                             )
                         }
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF322F44))
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            "Change",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = Color(0xFF7C6AF5)
-                        )
-                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(nc.overlay)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "Change",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.primary
+                    )
                 }
             }
         }
     }
 
-    // Date picker dialog — one-time mode only
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        val selected = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneOffset.UTC)
-                            .toLocalDate()
-                        onDateSelected(selected)
+                        onDateSelected(
+                            Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+                        )
                     }
                     showDatePicker = false
                 }) { Text("OK") }
@@ -403,20 +357,15 @@ private fun ScheduleSection(
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 
-    // Time picker dialog — recurring mode only
     if (showTimePicker) {
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             confirmButton = {
                 TextButton(onClick = {
-                    onRecurringTimeChange(
-                        LocalTime.of(timePickerState.hour, timePickerState.minute)
-                    )
+                    onRecurringTimeChange(LocalTime.of(timePickerState.hour, timePickerState.minute))
                     showTimePicker = false
                 }) { Text("Confirm") }
             },
@@ -436,11 +385,9 @@ private fun PrioritySection(
     Column {
         SectionLabel("PRIORITY")
         CustomToggleRow(
-            options = Priority.entries.map { it.label },
-            selectedIndex = selectedPriority.ordinal,
-            onOptionSelected = { index ->
-                onPrioritySelected(Priority.entries[index])
-            }
+            options          = Priority.entries.map { it.label },
+            selectedIndex    = selectedPriority.ordinal,
+            onOptionSelected = { index -> onPrioritySelected(Priority.entries[index]) }
         )
     }
 }
@@ -451,11 +398,14 @@ private fun CustomToggleRow(
     selectedIndex: Int,
     onOptionSelected: (Int) -> Unit
 ) {
+    val nc     = LocalNightcheckColors.current
+    val scheme = MaterialTheme.colorScheme
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
-            .background(Color(0xFF1C1C24), RoundedCornerShape(14.dp))
+            .background(scheme.surfaceVariant, RoundedCornerShape(14.dp))
             .padding(4.dp)
     ) {
         options.forEachIndexed { index, title ->
@@ -465,7 +415,7 @@ private fun CustomToggleRow(
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(11.dp))
-                    .background(if (isSelected) Color(0xFF322F44) else Color.Transparent)
+                    .background(if (isSelected) nc.overlay else androidx.compose.ui.graphics.Color.Transparent)
                     .clickable { onOptionSelected(index) },
                 contentAlignment = Alignment.Center
             ) {
@@ -474,14 +424,14 @@ private fun CustomToggleRow(
                         Icon(
                             Icons.Default.Check,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint     = scheme.onSurface,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
                     Text(
-                        text = title,
-                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f),
+                        text  = title,
+                        color = if (isSelected) scheme.onSurface else nc.textMuted,
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                     )
                 }
@@ -490,16 +440,16 @@ private fun CustomToggleRow(
     }
 }
 
-
 @Composable
 private fun ReminderSection(
     reminderTime: LocalDateTime?,
     onTimeSelected: (LocalDateTime?) -> Unit
 ) {
+    val nc     = LocalNightcheckColors.current
+    val scheme = MaterialTheme.colorScheme
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    // tempDate is only ever set right before showTimePicker = true,
-    // so it will always be non-null when the time dialog is shown.
     var tempDate by remember { mutableStateOf<LocalDate?>(null) }
 
     val datePickerState = rememberDatePickerState()
@@ -510,7 +460,7 @@ private fun ReminderSection(
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .clickable { showDatePicker = true },
-        color = Color(0xFF1C1C24)
+        color = scheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -519,13 +469,13 @@ private fun ReminderSection(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(Color(0xFF262438), RoundedCornerShape(12.dp)),
+                    .background(nc.surfaceHigh, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Notifications,
                     contentDescription = null,
-                    tint = Color(0xFF7C6AF5)
+                    tint = scheme.primary
                 )
             }
 
@@ -535,28 +485,25 @@ private fun ReminderSection(
                 Text(
                     "Set Reminder",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
+                    color = scheme.onSurface
                 )
                 Text(
-                    // Fixed: was "10 minutes before" which implied relative reminders.
-                    // Now accurately shows the absolute date+time or a neutral prompt.
                     reminderTime?.format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))
                         ?: "Tap to set reminder",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.4f)
+                    color = nc.textFaint
                 )
             }
 
-            // Allow clearing an already-set reminder with a second tap
             if (reminderTime != null) {
                 TextButton(onClick = { onTimeSelected(null) }) {
-                    Text("Clear", color = Color.White.copy(alpha = 0.4f))
+                    Text("Clear", color = nc.textMuted)
                 }
             } else {
                 Icon(
                     Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.2f)
+                    tint = nc.textFaint
                 )
             }
         }
@@ -573,16 +520,12 @@ private fun ReminderSection(
                         showDatePicker = false
                         showTimePicker = true
                     }
-                    // If nothing selected, just dismiss — don't open the time picker
-                    // with a null tempDate.
                 }) { Text("Next") }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
             }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ) { DatePicker(state = datePickerState) }
     }
 
     if (showTimePicker) {
@@ -601,9 +544,7 @@ private fun ReminderSection(
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
             },
-            text = {
-                TimePicker(state = timePickerState)
-            }
+            text = { TimePicker(state = timePickerState) }
         )
     }
 }
