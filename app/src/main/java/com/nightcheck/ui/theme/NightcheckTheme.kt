@@ -7,7 +7,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-val PurplePrimary = Color(0xFF7C6AF5)
+val PurplePrimary = Color(0xFFA78BFA) // Lighter, more vibrant purple from image
+val DarkBackground = Color(0xFF000000) // Pure black for the dark theme in image
+val CardBackground = Color(0xFF111111)
 
 val LocalThemeToggle = compositionLocalOf<() -> Unit> { {} }
 val LocalIsDarkTheme = compositionLocalOf<Boolean> { false }
@@ -16,10 +18,10 @@ private val md_theme_dark_primary            = PurplePrimary
 private val md_theme_dark_onPrimary          = Color(0xFFFFFFFF)
 private val md_theme_dark_primaryContainer   = Color(0xFF5D4EC4)
 private val md_theme_dark_onPrimaryContainer = Color(0xFFFFFFFF)
-private val md_theme_dark_background         = Color(0xFF0E0E12)
-private val md_theme_dark_onBackground       = Color(0xFFF0EDE8)
-private val md_theme_dark_surface            = Color(0xFF141418)
-private val md_theme_dark_onSurface          = Color(0xFFF0EDE8)
+private val md_theme_dark_background         = DarkBackground
+private val md_theme_dark_onBackground       = Color(0xFFFFFFFF)
+private val md_theme_dark_surface            = CardBackground
+private val md_theme_dark_onSurface          = Color(0xFFFFFFFF)
 private val md_theme_dark_surfaceVariant     = Color(0xFF1C1C24)
 private val md_theme_dark_onSurfaceVariant   = Color(0xFFAAAAAA)
 private val md_theme_dark_outline            = Color(0x26FFFFFF)
@@ -28,16 +30,16 @@ private val md_theme_dark_errorContainer     = Color(0xFF8C1D18)
 private val md_theme_dark_onError            = Color(0xFF601410)
 private val md_theme_dark_onErrorContainer   = Color(0xFFF9DEDC)
 
-private val md_theme_light_primary            = PurplePrimary
+private val md_theme_light_primary            = Color(0xFF6366F1)
 private val md_theme_light_onPrimary          = Color(0xFFFFFFFF)
 private val md_theme_light_primaryContainer   = Color(0xFFEADDFF)
 private val md_theme_light_onPrimaryContainer = Color(0xFF21005D)
-private val md_theme_light_background         = Color(0xFFF4F3EF)
-private val md_theme_light_onBackground       = Color(0xFF1A1917)
+private val md_theme_light_background         = Color(0xFFF9FAFB)
+private val md_theme_light_onBackground       = Color(0xFF111827)
 private val md_theme_light_surface            = Color(0xFFFFFFFF)
-private val md_theme_light_onSurface          = Color(0xFF1A1917)
-private val md_theme_light_surfaceVariant     = Color(0xFFE7E0EC)
-private val md_theme_light_onSurfaceVariant   = Color(0xFF666666)
+private val md_theme_light_onSurface          = Color(0xFF111827)
+private val md_theme_light_surfaceVariant     = Color(0xFFF3F4F6)
+private val md_theme_light_onSurfaceVariant   = Color(0xFF6B7280)
 private val md_theme_light_outline            = Color(0x26000000)
 private val md_theme_light_error              = Color(0xFFB3261E)
 private val md_theme_light_errorContainer     = Color(0xFFF9DEDC)

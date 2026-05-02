@@ -1,6 +1,5 @@
 package com.nightcheck.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,31 +38,32 @@ fun TaskCard(
     val isDone = task.status == TaskStatus.COMPLETED
     val isDark = isSystemInDarkTheme()
 
-    val backgroundColor = if (isDark) Color(0x0DFFFFFF) else MaterialTheme.colorScheme.surface
-    val borderColor = if (isDark) Color(0x0FFFFFFF) else MaterialTheme.colorScheme.outlineVariant
+    val backgroundColor = if (isDark) Color(0xFF111111) else Color(0xFFF3F4F6)
+    val contentAlpha = if (isDone) 0.3f else 1f
 
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        border = BorderStroke(0.5.dp, borderColor)
+        color = backgroundColor,
+        shape = RoundedCornerShape(24.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 13.dp),
+                .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Checkbox Circle
             Box(
                 modifier = Modifier
-                    .size(22.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(if (isDone) MaterialTheme.colorScheme.primary else Color.Transparent)
                     .border(
-                        width = 1.5.dp,
-                        color = if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
+                        width = 2.dp,
+                        color = if (isDone) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f),
                         shape = CircleShape
                     )
                     .clickable { onToggleStatus(if (isDone) TaskStatus.PENDING else TaskStatus.COMPLETED) },
@@ -74,62 +74,55 @@ fun TaskCard(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Done",
                         tint = Color.White,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = task.title,
-                    fontSize = 13.sp,
-                    color = if (isDone) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = if (isDone) 0.3f else 0.9f),
                     textDecoration = if (isDone) TextDecoration.LineThrough else null,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                val timeText = if (!task.description.isNullOrBlank()) task.description else "No time set"
-                Text(
-                    text = timeText,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (!isDone) {
+                    val timeText = if (!task.description.isNullOrBlank()) task.description else "30 mins remaining"
+                    Text(
+                        text = timeText,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.4f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Spacer(Modifier.width(8.dp))
 
-            val (tagBg, tagTextCol, tagLabel) = when (task.priority) {
-                Priority.HIGH -> Triple(
-                    if (isDark) Color(0x1FFBBF24) else Color(0x1FFBBF24),
-                    if (isDark) Color(0xFFD4A017) else Color(0xFFB07B00),
-                    "Urgent"
-                )
-                Priority.MEDIUM -> Triple(
-                    Color(0x267C6AF5),
-                    Color(0xFFA78BFA),
-                    "Study"
-                )
-                Priority.LOW -> Triple(
-                    if (isDark) Color(0x1F34D399) else Color(0x1F34D399),
-                    if (isDark) Color(0xFF34D399) else Color(0xFF059669),
-                    "Health"
-                )
+            // Category/Priority Tag
+            val tagLabel = when (task.priority) {
+                Priority.HIGH -> "URGENT"
+                Priority.MEDIUM -> "ACADEMIC"
+                Priority.LOW -> "HEALTH"
             }
 
             Box(
                 modifier = Modifier
-                    .background(tagBg, CircleShape)
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = tagLabel,
-                    color = tagTextCol,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = if (isDone) 0.3f else 1f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
                 )
             }
         }
@@ -145,27 +138,24 @@ fun NoteCard(
 ) {
     val isDark = isSystemInDarkTheme()
     
-    // Background color based on saved colorHex or default
     val backgroundColor = note.colorHex?.let { Color(it.toColorInt()) } 
-        ?: (if (isDark) Color(0x0DFFFFFF) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ?: (if (isDark) Color(0xFF111111) else Color(0xFFF3F4F6))
     
-    val borderColor = if (isDark) Color(0x0DFFFFFF) else MaterialTheme.colorScheme.outlineVariant
-    val titleColor = MaterialTheme.colorScheme.onSurface
-    val bodyColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val titleColor = Color.White
+    val bodyColor = Color.White.copy(alpha = 0.6f)
 
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        border = BorderStroke(0.5.dp, borderColor)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = note.title.ifBlank { "Untitled" },
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = titleColor,
                     modifier = Modifier.weight(1f),
@@ -177,15 +167,15 @@ fun NoteCard(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = "Pinned",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
             if (note.body.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = note.body,
-                    fontSize = 12.sp,
+                    fontSize = 13.sp,
                     color = bodyColor,
                     fontWeight = if (note.isBold) FontWeight.Bold else FontWeight.Normal,
                     fontStyle = if (note.isItalic) FontStyle.Italic else FontStyle.Normal,

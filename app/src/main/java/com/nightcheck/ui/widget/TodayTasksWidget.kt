@@ -39,7 +39,8 @@ class TodayTasksWidget : GlanceAppWidget() {
 
 @Composable
 private fun TodayTasksWidgetContent(tasks: List<Task>) {
-    // Root container
+    // FIX 4: Removed greedy clickable from the root Column.
+    // The "open app" action is now only on the header Row.
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -53,6 +54,7 @@ private fun TodayTasksWidgetContent(tasks: List<Task>) {
                 .clickable(actionStartActivity<MainActivity>()),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            @Suppress("DEPRECATION")
             Text(
                 text = "Today",
                 style = TextStyle(
@@ -106,7 +108,7 @@ private fun TaskWidgetRow(task: Task) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Checkbox/Status Box
+        // Checkbox - no longer blocked by greedy parent
         Box(
             modifier = GlanceModifier
                 .size(20.dp)
