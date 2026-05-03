@@ -40,22 +40,26 @@ class EndOfDayReviewViewModel @Inject constructor(
         taskRepository.observeTasksForDay(LocalDate.now()),
         _actionMap
     ) { tasks, actionMap ->
-        // We only want to "review" tasks that were PENDING or that we've acted on in this session.
-        // Completed tasks (already done before review) shouldn't show up in the "need attention" list.
-        val reviewItems = tasks
+
+        // EOD Review only surfaces ONE-TIME tasks whose due date is today.
+        // Recurring tasks repeat automatically on their scheduled days and
+        // are NOT included here — users handle them in the main task list.
+        val oneTimeTodayTasks = tasks.filter { it.recurringDays == null }
+
+        val reviewItems = oneTimeTodayTasks
             .filter { it.status == TaskStatus.PENDING || actionMap.containsKey(it.id) }
             .map { task ->
                 ReviewTaskItem(
-                    task = task,
+                    task   = task,
                     action = actionMap[task.id] ?: ReviewAction.NONE
                 )
             }
 
         EndOfDayUiState(
-            items = reviewItems,
-            totalTodayCount = tasks.size,
-            completedTodayCount = tasks.count { it.status == TaskStatus.COMPLETED },
-            isLoading = false
+            items              = reviewItems,
+            totalTodayCount    = oneTimeTodayTasks.size,
+            completedTodayCount = oneTimeTodayTasks.count { it.status == TaskStatus.COMPLETED },
+            isLoading          = false
         )
     }.stateIn(
         viewModelScope,

@@ -25,10 +25,14 @@ import javax.inject.Inject
 data class AddEditTaskUiState(
     val title: String = "",
     val description: String = "",
-    // One-time mode: dueDate is set, recurringTime is null
-    // Recurring mode: recurringTime is set, dueDate is null
+    // One-time mode
     val dueDate: LocalDate? = LocalDate.now(),
-    val recurringTime: LocalTime? = null,
+    val dueTime: LocalTime? = null,          // optional time for one-time tasks
+    // Recurring mode
+    val recurringDays: Set<DayOfWeek> = emptySet(),
+    val recurringTime: LocalTime = LocalTime.of(9, 0),
+    // Shared
+    val isRecurring: Boolean = false,
     val priority: Priority = Priority.MEDIUM,
     val status: TaskStatus = TaskStatus.PENDING,
     val reminderTime: LocalDateTime? = null,
@@ -52,10 +56,6 @@ class AddEditTaskViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AddEditTaskUiState())
     val uiState: StateFlow<AddEditTaskUiState> = _uiState.asStateFlow()
 
-    // Holds the last-used recurring time so switching back to recurring
-    // restores the user's previous time instead of resetting to null.
-    private var lastRecurringTime: LocalTime = LocalTime.of(9, 0)
-
     init {
         taskId?.let { loadTask(it) }
     }
@@ -65,30 +65,20 @@ class AddEditTaskViewModel @Inject constructor(
         try {
             val task = taskRepository.getTaskById(id)
             if (task != null) {
-                // If the task has recurringDays set (non-null), it is a recurring task.
-                // We restore the recurring time from task.recurringTime if available,
-                // otherwise fall back to lastRecurringTime.
                 val isRecurring = task.recurringDays != null
-                val recurringTime: LocalTime? = if (isRecurring) {
-                    // If your Task domain model gains a recurringTime field, read it here:
-                    // task.recurringTime ?: lastRecurringTime
-                    // For now, fall back to lastRecurringTime since the domain stores no time yet.
-                    lastRecurringTime
-                } else null
-
-                if (recurringTime != null) lastRecurringTime = recurringTime
-
                 _uiState.update { _ ->
                     AddEditTaskUiState(
-                        title         = task.title,
-                        description   = task.description ?: "",
-                        // For recurring tasks, clear dueDate; for one-time, keep it.
-                        dueDate       = if (isRecurring) null else task.dueDate,
-                        recurringTime = recurringTime,
-                        priority      = task.priority,
-                        status        = task.status,
-                        reminderTime  = task.reminderTime,
-                        isLoading     = false
+                        title        = task.title,
+                        description  = task.description ?: "",
+                        dueDate      = if (isRecurring) null else task.dueDate,
+                        dueTime      = null,
+                        recurringDays = task.recurringDays ?: emptySet(),
+                        recurringTime = task.recurringTime ?: LocalTime.of(9, 0),
+                        isRecurring  = isRecurring,
+                        priority     = task.priority,
+                        status       = task.status,
+                        reminderTime = task.reminderTime,
+                        isLoading    = false
                     )
                 }
             } else {
@@ -101,27 +91,28 @@ class AddEditTaskViewModel @Inject constructor(
 
     fun onTitleChange(value: String) = _uiState.update { it.copy(title = value) }
     fun onDescriptionChange(value: String) = _uiState.update { it.copy(description = value) }
+    fun onDueDateChange(value: LocalDate?) = _uiState.update { it.copy(dueDate = value) }
+    fun onDueTimeChange(value: LocalTime?) = _uiState.update { it.copy(dueTime = value) }
+    fun onRecurringTimeChange(time: LocalTime) = _uiState.update { it.copy(recurringTime = time) }
+    fun onPriorityChange(value: Priority) = _uiState.update { it.copy(priority = value) }
+    fun onReminderTimeChange(value: LocalDateTime?) = _uiState.update { it.copy(reminderTime = value) }
 
-    fun onDueDateChange(value: LocalDate?) = _uiState.update {
-        it.copy(dueDate = value, recurringTime = null)
-    }
-
-    fun onRecurringTimeChange(time: LocalTime?) {
-        if (time != null) lastRecurringTime = time
-        _uiState.update { it.copy(recurringTime = time, dueDate = null) }
-    }
-
-    // Called when the user switches between One-time / Recurring tabs.
-    fun onScheduleModeChange(isRecurring: Boolean) {
-        if (isRecurring) {
-            _uiState.update { it.copy(recurringTime = lastRecurringTime, dueDate = null) }
-        } else {
-            _uiState.update { it.copy(dueDate = LocalDate.now(), recurringTime = null) }
+    fun toggleRecurringDay(day: DayOfWeek) {
+        _uiState.update { state ->
+            val days = state.recurringDays.toMutableSet()
+            if (day in days) days.remove(day) else days.add(day)
+            state.copy(recurringDays = days)
         }
     }
 
-    fun onPriorityChange(value: Priority) = _uiState.update { it.copy(priority = value) }
-    fun onReminderTimeChange(value: LocalDateTime?) = _uiState.update { it.copy(reminderTime = value) }
+    fun onScheduleModeChange(isRecurring: Boolean) {
+        _uiState.update {
+            it.copy(
+                isRecurring = isRecurring,
+                dueDate = if (isRecurring) null else LocalDate.now()
+            )
+        }
+    }
 
     fun save() {
         val state = _uiState.value
@@ -129,32 +120,32 @@ class AddEditTaskViewModel @Inject constructor(
             _uiState.update { it.copy(error = "Title is required") }
             return
         }
+        if (state.isRecurring && state.recurringDays.isEmpty()) {
+            _uiState.update { it.copy(error = "Select at least one day for recurring tasks") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val isRecurring = state.recurringTime != null
-
-                // FIX: For recurring tasks, pass all 7 days as the recurringDays set so
-                // the repository knows this is a daily recurring task (non-empty set = recurring).
-                // For one-time tasks, pass null.
-                // NOTE: Once Task gains a dedicated `recurringTime: LocalTime?` field in the
-                // domain model, store state.recurringTime there instead of encoding it in the set.
-                val recurringDays: Set<DayOfWeek>? = if (isRecurring) {
-                    DayOfWeek.entries.toSet() // all 7 days = "daily"
-                } else {
-                    null // not recurring
+                // For one-time tasks with a time, combine date+time into reminderTime
+                // if no explicit reminder was set by the user.
+                val effectiveReminder = when {
+                    state.reminderTime != null -> state.reminderTime
+                    !state.isRecurring && state.dueDate != null && state.dueTime != null ->
+                        LocalDateTime.of(state.dueDate, state.dueTime)
+                    else -> null
                 }
 
                 val task = Task(
                     id            = taskId ?: 0L,
                     title         = state.title.trim(),
                     description   = state.description.trim().ifBlank { null },
-                    // For recurring tasks, dueDate is null; for one-time, use selected date.
-                    dueDate       = if (isRecurring) null else state.dueDate,
-                    recurringDays = recurringDays,
+                    dueDate       = if (state.isRecurring) null else state.dueDate,
+                    recurringDays = if (state.isRecurring) state.recurringDays else null,
+                    recurringTime = if (state.isRecurring) state.recurringTime else null,
                     priority      = state.priority,
                     status        = state.status,
-                    reminderTime  = state.reminderTime
+                    reminderTime  = effectiveReminder
                 )
                 saveTaskUseCase(task)
                 _uiState.update { it.copy(isLoading = false, isSaved = true) }

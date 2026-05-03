@@ -9,6 +9,7 @@ import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.ZoneId
 
 // ── TaskEntity ↔ Task ────────────────────────────────────────────────────────
@@ -18,7 +19,11 @@ fun TaskEntity.toDomain(): Task = Task(
     title = title,
     description = description,
     dueDate = dueDateEpochDay?.let { LocalDate.ofEpochDay(it) },
-    recurringDays = recurringDays?.split(",")?.filter { it.isNotEmpty() }?.map { DayOfWeek.of(it.toInt()) }?.toSet(),
+    recurringDays = recurringDays?.split(",")?.filter { it.isNotEmpty() }
+        ?.map { DayOfWeek.of(it.toInt()) }?.toSet(),
+    recurringTime = recurringTimeMinutes?.let {
+        LocalTime.of(it / 60, it % 60)
+    },
     lastCompletedDate = lastCompletedDateEpochDay?.let { LocalDate.ofEpochDay(it) },
     priority = Priority.fromOrdinal(priority),
     status = TaskStatus.fromOrdinal(status),
@@ -33,6 +38,7 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
     description = description,
     dueDateEpochDay = dueDate?.toEpochDay(),
     recurringDays = recurringDays?.joinToString(",") { it.value.toString() },
+    recurringTimeMinutes = recurringTime?.let { it.hour * 60 + it.minute },
     lastCompletedDateEpochDay = lastCompletedDate?.toEpochDay(),
     priority = priority.ordinal,
     status = status.ordinal,

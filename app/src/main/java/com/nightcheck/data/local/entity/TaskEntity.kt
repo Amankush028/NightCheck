@@ -2,8 +2,6 @@ package com.nightcheck.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.time.LocalDate
-import java.time.LocalDateTime
 
 /**
  * Room entity representing a Task row in the database.
@@ -20,11 +18,17 @@ data class TaskEntity(
     /** ISO epoch day – nullable means no due date */
     val dueDateEpochDay: Long? = null,
 
-    /** 
+    /**
      * Comma-separated list of DayOfWeek ordinals (1-7, where 1 is Monday).
      * Null means not recurring.
      */
     val recurringDays: String? = null,
+
+    /**
+     * Minutes-since-midnight for the daily recurring time (e.g. 9*60+30 = 570 for 09:30).
+     * Null means no recurring time set.
+     */
+    val recurringTimeMinutes: Int? = null,
 
     /** ISO epoch day of last completion – used for recurring tasks */
     val lastCompletedDateEpochDay: Long? = null,

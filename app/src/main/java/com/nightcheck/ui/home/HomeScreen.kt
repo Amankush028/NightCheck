@@ -106,6 +106,7 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize().background(scheme.background)) {
         LazyColumn(
             modifier       = Modifier.fillMaxSize(),
+
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             item(key = "header") {
@@ -267,6 +268,7 @@ private fun HomeHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = 24.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment     = Alignment.CenterVertically

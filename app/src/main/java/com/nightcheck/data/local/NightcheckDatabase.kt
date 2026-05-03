@@ -15,7 +15,7 @@ import com.nightcheck.data.local.entity.TaskEntity
         NoteEntity::class,
         ReminderEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class NightcheckDatabase : RoomDatabase() {

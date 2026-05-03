@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     NightcheckNavGraph(
                         navController = navController,
-                        modifier      = Modifier.padding(innerPadding)
+                        modifier      = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
                     )
                 }
             }

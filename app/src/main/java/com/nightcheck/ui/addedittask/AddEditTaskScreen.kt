@@ -20,7 +20,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,12 +29,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nightcheck.domain.model.Priority
 import com.nightcheck.ui.theme.LocalNightcheckColors
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +99,6 @@ fun AddEditTaskScreen(
         containerColor  = scheme.background,
         snackbarHost    = { SnackbarHost(snackbarHostState) },
         topBar = {
-            // ── Custom top bar ─────────────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -105,47 +106,28 @@ fun AddEditTaskScreen(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Back button
                 IconButton(onClick = onNavigateUp) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint               = scheme.onBackground
-                    )
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = scheme.onBackground)
                 }
-
-                // Title
                 Text(
                     text      = if (isEditing) "Edit Task" else "New Task",
                     style     = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize   = 20.sp
+                        fontWeight = FontWeight.Bold, fontSize = 20.sp
                     ),
                     color     = scheme.onBackground,
                     modifier  = Modifier.weight(1f),
                     textAlign = TextAlign.Center
                 )
-
-                // Delete (edit mode only)
                 if (isEditing) {
-                    IconButton(
-                        onClick  = { showDeleteDialog = true },
-                        enabled  = !uiState.isLoading
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete task",
-                            tint               = nc.destructive
-                        )
+                    IconButton(onClick = { showDeleteDialog = true }, enabled = !uiState.isLoading) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete task", tint = nc.destructive)
                     }
                 } else {
-                    // Spacer to balance the layout
                     Spacer(modifier = Modifier.size(48.dp))
                 }
             }
         },
         bottomBar = {
-            // ── Save button pinned at bottom ───────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,26 +137,20 @@ fun AddEditTaskScreen(
                 Button(
                     onClick        = viewModel::save,
                     enabled        = !uiState.isLoading,
-                    modifier       = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
+                    modifier       = Modifier.fillMaxWidth().height(54.dp),
                     shape          = RoundedCornerShape(16.dp),
                     colors         = ButtonDefaults.buttonColors(
-                        containerColor = scheme.primary,
-                        contentColor   = scheme.onPrimary
+                        containerColor = scheme.primary, contentColor = scheme.onPrimary
                     )
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
-                            modifier  = Modifier.size(20.dp),
-                            color     = scheme.onPrimary,
-                            strokeWidth = 2.dp
+                            modifier = Modifier.size(20.dp), color = scheme.onPrimary, strokeWidth = 2.dp
                         )
                     } else {
                         Text(
                             text       = if (isEditing) "Save Changes" else "Create Task",
-                            fontWeight = FontWeight.Bold,
-                            fontSize   = 16.sp
+                            fontWeight = FontWeight.Bold, fontSize = 16.sp
                         )
                     }
                 }
@@ -190,7 +166,7 @@ fun AddEditTaskScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ── Title field ────────────────────────────────────────────────
+            // ── Title ──────────────────────────────────────────────────────
             NightSection(label = "TITLE") {
                 NightTextField(
                     value         = uiState.title,
@@ -201,7 +177,7 @@ fun AddEditTaskScreen(
                 )
             }
 
-            // ── Description field ──────────────────────────────────────────
+            // ── Description ────────────────────────────────────────────────
             NightSection(label = "DESCRIPTION") {
                 NightTextField(
                     value         = uiState.description,
@@ -214,10 +190,15 @@ fun AddEditTaskScreen(
             // ── Schedule ───────────────────────────────────────────────────
             NightSection(label = "SCHEDULE") {
                 NightScheduleSection(
-                    dueDate               = uiState.dueDate,
-                    recurringTime         = uiState.recurringTime,
-                    onScheduleModeChange  = viewModel::onScheduleModeChange,
-                    onDateSelected        = viewModel::onDueDateChange,
+                    isRecurring          = uiState.isRecurring,
+                    dueDate              = uiState.dueDate,
+                    dueTime              = uiState.dueTime,
+                    recurringDays        = uiState.recurringDays,
+                    recurringTime        = uiState.recurringTime,
+                    onScheduleModeChange = viewModel::onScheduleModeChange,
+                    onDateSelected       = viewModel::onDueDateChange,
+                    onDueTimeChange      = viewModel::onDueTimeChange,
+                    onToggleDay          = viewModel::toggleRecurringDay,
                     onRecurringTimeChange = viewModel::onRecurringTimeChange
                 )
             }
@@ -243,9 +224,7 @@ fun AddEditTaskScreen(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Section wrapper
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Section wrapper ───────────────────────────────────────────────────────────
 
 @Composable
 private fun NightSection(
@@ -266,9 +245,7 @@ private fun NightSection(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Text field
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Text field ────────────────────────────────────────────────────────────────
 
 @Composable
 private fun NightTextField(
@@ -281,7 +258,6 @@ private fun NightTextField(
 ) {
     val nc     = LocalNightcheckColors.current
     val scheme = MaterialTheme.colorScheme
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -292,11 +268,8 @@ private fun NightTextField(
             value         = value,
             onValueChange = onValueChange,
             placeholder   = {
-                Text(
-                    placeholder,
-                    color = nc.textFaint,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = fontSize.sp)
-                )
+                Text(placeholder, color = nc.textFaint,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = fontSize.sp))
             },
             modifier   = Modifier.fillMaxWidth(),
             singleLine = singleLine,
@@ -316,37 +289,24 @@ private fun NightTextField(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Schedule section
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Schedule section ──────────────────────────────────────────────────────────
 
 @Composable
 private fun NightScheduleSection(
+    isRecurring: Boolean,
     dueDate: LocalDate?,
-    recurringTime: LocalTime?,
+    dueTime: LocalTime?,
+    recurringDays: Set<DayOfWeek>,
+    recurringTime: LocalTime,
     onScheduleModeChange: (Boolean) -> Unit,
     onDateSelected: (LocalDate?) -> Unit,
-    onRecurringTimeChange: (LocalTime?) -> Unit
+    onDueTimeChange: (LocalTime?) -> Unit,
+    onToggleDay: (DayOfWeek) -> Unit,
+    onRecurringTimeChange: (LocalTime) -> Unit
 ) {
-    val isRecurring = recurringTime != null
-    val nc          = LocalNightcheckColors.current
-    val scheme      = MaterialTheme.colorScheme
+    val scheme = MaterialTheme.colorScheme
 
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
-
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = dueDate
-            ?.atStartOfDay(ZoneOffset.UTC)
-            ?.toInstant()
-            ?.toEpochMilli()
-    )
-    val timePickerState = rememberTimePickerState(
-        initialHour   = recurringTime?.hour ?: 9,
-        initialMinute = recurringTime?.minute ?: 0
-    )
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
         // One-time / Recurring toggle
         NightToggleRow(
@@ -355,73 +315,149 @@ private fun NightScheduleSection(
             onOptionSelected = { onScheduleModeChange(it == 1) }
         )
 
-        // Date / time picker card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(scheme.surface)
-                .clickable { if (isRecurring) showTimePicker = true else showDatePicker = true }
-                .padding(horizontal = 20.dp, vertical = 18.dp)
-        ) {
-            Row(
-                verticalAlignment      = Alignment.CenterVertically,
-                horizontalArrangement  = Arrangement.SpaceBetween,
-                modifier               = Modifier.fillMaxWidth()
-            ) {
-                if (isRecurring) {
-                    Column {
-                        Text(
-                            "Repeats daily at",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                letterSpacing = 0.8.sp,
-                                color         = nc.textFaint
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            recurringTime?.format(DateTimeFormatter.ofPattern("h:mm a")) ?: "Set time",
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color      = scheme.onSurface
-                            )
-                        )
-                    }
-                } else {
-                    val today    = LocalDate.now()
-                    val tomorrow = today.plusDays(1)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text  = dueDate?.dayOfMonth?.toString() ?: "--",
-                            style = MaterialTheme.typography.displaySmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color      = scheme.primary
-                            )
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            val label = when (dueDate) {
-                                today    -> "Today"
-                                tomorrow -> "Tomorrow"
-                                else     -> dueDate?.format(DateTimeFormatter.ofPattern("EEEE"))
-                                    ?: "Pick a date"
-                            }
-                            Text(
-                                text  = label,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color      = scheme.onSurface
-                                )
-                            )
-                            Text(
-                                text  = dueDate?.format(DateTimeFormatter.ofPattern("MMMM yyyy")) ?: "",
-                                style = MaterialTheme.typography.bodySmall.copy(color = nc.textFaint)
-                            )
-                        }
-                    }
-                }
+        if (!isRecurring) {
+            // ── ONE-TIME: date picker card + optional time ─────────────────
+            OneTimeDateCard(
+                dueDate      = dueDate,
+                dueTime      = dueTime,
+                onDateSelected = onDateSelected,
+                onTimeChange = onDueTimeChange
+            )
+        } else {
+            // ── RECURRING: weekday chips + time picker ─────────────────────
+            WeekdaySelector(
+                selectedDays = recurringDays,
+                onToggleDay  = onToggleDay
+            )
+            RecurringTimeCard(
+                recurringTime = recurringTime,
+                onTimeChange  = onRecurringTimeChange
+            )
+        }
+    }
+}
 
-                // "Change" pill
+// ── One-time: date + optional time ───────────────────────────────────────────
+
+@Composable
+private fun OneTimeDateCard(
+    dueDate: LocalDate?,
+    dueTime: LocalTime?,
+    onDateSelected: (LocalDate?) -> Unit,
+    onTimeChange: (LocalTime?) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val nc     = LocalNightcheckColors.current
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = dueDate
+            ?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
+    )
+    val timePickerState = rememberTimePickerState(
+        initialHour   = dueTime?.hour ?: 9,
+        initialMinute = dueTime?.minute ?: 0
+    )
+
+    val today    = LocalDate.now()
+    val tomorrow = today.plusDays(1)
+
+    // Date row
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .clickable { showDatePicker = true }
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier              = Modifier.fillMaxWidth()
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text  = dueDate?.dayOfMonth?.toString() ?: "--",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.Bold, color = scheme.primary
+                    )
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    val label = when (dueDate) {
+                        today    -> "Today"
+                        tomorrow -> "Tomorrow"
+                        else     -> dueDate?.format(DateTimeFormatter.ofPattern("EEEE")) ?: "Pick a date"
+                    }
+                    Text(
+                        text  = label,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold, color = scheme.onSurface
+                        )
+                    )
+                    Text(
+                        text  = dueDate?.format(DateTimeFormatter.ofPattern("MMMM yyyy")) ?: "",
+                        style = MaterialTheme.typography.bodySmall.copy(color = nc.textFaint)
+                    )
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(nc.overlay)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    "Change",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold, color = scheme.primary
+                    )
+                )
+            }
+        }
+    }
+
+    // Time row (optional)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .clickable { showTimePicker = true }
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier              = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Text(
+                    "Time (optional)",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        letterSpacing = 0.8.sp, color = nc.textFaint
+                    )
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    dueTime?.format(DateTimeFormatter.ofPattern("h:mm a")) ?: "No time set",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        color      = if (dueTime != null) scheme.onSurface else nc.textMuted
+                    )
+                )
+            }
+            if (dueTime != null) {
+                TextButton(
+                    onClick        = { onTimeChange(null) },
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Text("Clear", color = nc.textMuted, fontSize = 12.sp)
+                }
+            } else {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
@@ -429,10 +465,9 @@ private fun NightScheduleSection(
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Text(
-                        "Change",
+                        "Set",
                         style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color      = scheme.primary
+                            fontWeight = FontWeight.SemiBold, color = scheme.primary
                         )
                     )
                 }
@@ -453,9 +488,7 @@ private fun NightScheduleSection(
                     showDatePicker = false
                 }) { Text("OK") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
         ) { DatePicker(state = datePickerState) }
     }
 
@@ -465,23 +498,138 @@ private fun NightScheduleSection(
             containerColor   = MaterialTheme.colorScheme.surfaceVariant,
             confirmButton = {
                 TextButton(onClick = {
-                    onRecurringTimeChange(
-                        LocalTime.of(timePickerState.hour, timePickerState.minute)
-                    )
+                    onTimeChange(LocalTime.of(timePickerState.hour, timePickerState.minute))
                     showTimePicker = false
                 }) { Text("Confirm") }
             },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
-            },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel") } },
             text = { TimePicker(state = timePickerState) }
         )
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Priority row
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Weekday selector ──────────────────────────────────────────────────────────
+
+@Composable
+private fun WeekdaySelector(
+    selectedDays: Set<DayOfWeek>,
+    onToggleDay: (DayOfWeek) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val nc     = LocalNightcheckColors.current
+
+    // Mon … Sun in order
+    val days = DayOfWeek.entries
+
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        days.forEach { day ->
+            val isSelected = day in selectedDays
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isSelected) scheme.primary else scheme.surface)
+                    .border(
+                        width = 1.dp,
+                        color = if (isSelected) scheme.primary else nc.borderMuted,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { onToggleDay(day) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text  = day.getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color      = if (isSelected) scheme.onPrimary else nc.textMuted
+                    )
+                )
+            }
+        }
+    }
+}
+
+// ── Recurring time card ───────────────────────────────────────────────────────
+
+@Composable
+private fun RecurringTimeCard(
+    recurringTime: LocalTime,
+    onTimeChange: (LocalTime) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val nc     = LocalNightcheckColors.current
+
+    var showTimePicker by remember { mutableStateOf(false) }
+    val timePickerState = rememberTimePickerState(
+        initialHour   = recurringTime.hour,
+        initialMinute = recurringTime.minute
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(scheme.surface)
+            .clickable { showTimePicker = true }
+            .padding(horizontal = 20.dp, vertical = 18.dp)
+    ) {
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier              = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Text(
+                    "Repeats daily at",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        letterSpacing = 0.8.sp, color = nc.textFaint
+                    )
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    recurringTime.format(DateTimeFormatter.ofPattern("h:mm a")),
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold, color = scheme.onSurface
+                    )
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(nc.overlay)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    "Change",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.SemiBold, color = scheme.primary
+                    )
+                )
+            }
+        }
+    }
+
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            containerColor   = MaterialTheme.colorScheme.surfaceVariant,
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeChange(LocalTime.of(timePickerState.hour, timePickerState.minute))
+                    showTimePicker = false
+                }) { Text("Confirm") }
+            },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel") } },
+            text = { TimePicker(state = timePickerState) }
+        )
+    }
+}
+
+// ── Priority row ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun NightPriorityRow(
@@ -497,13 +645,11 @@ private fun NightPriorityRow(
     ) {
         Priority.entries.forEach { priority ->
             val isSelected = priority == selectedPriority
-
             val (accentColor, bgColor) = when (priority) {
                 Priority.HIGH   -> scheme.error to scheme.errorContainer
                 Priority.MEDIUM -> scheme.primary to nc.overlay
                 Priority.LOW    -> nc.textMuted to scheme.surfaceVariant
             }
-
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -521,10 +667,8 @@ private fun NightPriorityRow(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (isSelected) {
                         Icon(
-                            Icons.Default.Check,
-                            contentDescription = null,
-                            tint     = accentColor,
-                            modifier = Modifier.size(16.dp)
+                            Icons.Default.Check, contentDescription = null,
+                            tint = accentColor, modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
@@ -541,9 +685,7 @@ private fun NightPriorityRow(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Reminder row
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Reminder row ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun NightReminderRow(
@@ -569,7 +711,6 @@ private fun NightReminderRow(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Bell icon box
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -578,43 +719,32 @@ private fun NightReminderRow(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                Icons.Default.Notifications,
-                contentDescription = null,
-                tint               = scheme.primary,
-                modifier           = Modifier.size(22.dp)
+                Icons.Default.Notifications, contentDescription = null,
+                tint = scheme.primary, modifier = Modifier.size(22.dp)
             )
         }
-
         Spacer(modifier = Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 "Set Reminder",
                 style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    color      = scheme.onSurface
+                    fontWeight = FontWeight.SemiBold, color = scheme.onSurface
                 )
             )
             Text(
-                reminderTime?.format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))
-                    ?: "No reminder set",
+                reminderTime?.format(DateTimeFormatter.ofPattern("MMM d, h:mm a")) ?: "No reminder set",
                 style = MaterialTheme.typography.bodySmall.copy(color = nc.textFaint)
             )
         }
-
         if (reminderTime != null) {
             TextButton(
-                onClick      = { onTimeSelected(null) },
+                onClick        = { onTimeSelected(null) },
                 contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Text("Clear", color = nc.textMuted, fontSize = 12.sp)
-            }
+            ) { Text("Clear", color = nc.textMuted, fontSize = 12.sp) }
         } else {
             Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint     = nc.textFaint,
-                modifier = Modifier.size(20.dp)
+                Icons.Default.ChevronRight, contentDescription = null,
+                tint = nc.textFaint, modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -632,9 +762,7 @@ private fun NightReminderRow(
                     }
                 }) { Text("Next") }
             },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
         ) { DatePicker(state = datePickerState) }
     }
 
@@ -652,17 +780,13 @@ private fun NightReminderRow(
                     showTimePicker = false
                 }) { Text("Confirm") }
             },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
-            },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel") } },
             text = { TimePicker(state = timePickerState) }
         )
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Generic toggle row (One-time/Recurring, etc.)
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Generic toggle row ────────────────────────────────────────────────────────
 
 @Composable
 private fun NightToggleRow(
@@ -694,15 +818,13 @@ private fun NightToggleRow(
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    verticalAlignment      = Alignment.CenterVertically,
-                    horizontalArrangement  = Arrangement.Center
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     if (isSelected) {
                         Icon(
-                            Icons.Default.Check,
-                            contentDescription = null,
-                            tint     = scheme.primary,
-                            modifier = Modifier.size(14.dp)
+                            Icons.Default.Check, contentDescription = null,
+                            tint = scheme.primary, modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(5.dp))
                     }
