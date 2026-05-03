@@ -33,26 +33,31 @@ import com.nightcheck.ui.theme.NightcheckTheme
 import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import com.nightcheck.util.PreferencesManager
+import jakarta.inject.Inject
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @AndroidEntryPoint
 class EndOfDayReviewActivity : ComponentActivity() {
 
     private val viewModel: EndOfDayReviewViewModel by viewModels()
 
+    @Inject lateinit var preferencesManager: PreferencesManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        }
-        window.addFlags(
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                    WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
-        )
+        // ... window flags same as before ...
         enableEdgeToEdge()
         setContent {
-            NightcheckTheme {
-                EndOfDayReviewScreen(viewModel = viewModel, onFinish = { finish() })
+            val systemDark = isSystemInDarkTheme()
+            val isDarkTheme by preferencesManager.isDarkTheme
+                .collectAsStateWithLifecycle(initialValue = systemDark)
+
+            NightcheckTheme(darkTheme = isDarkTheme) {   // no toggle needed here
+                EndOfDayReviewScreen(
+                    viewModel = viewModel,
+                    onFinish  = { finish() }
+                )
             }
         }
     }

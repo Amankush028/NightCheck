@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.datastore.preferences.core.booleanPreferencesKey
 
 @Singleton
 class PreferencesManager @Inject constructor(
@@ -27,6 +28,14 @@ class PreferencesManager @Inject constructor(
         prefs[Keys.EOD_HOUR] ?: DEFAULT_EOD_HOUR
     }
 
+    val isDarkTheme: Flow<Boolean> = dataStore.data
+        .map { prefs -> prefs[IS_DARK_THEME_KEY] ?: true } // default: dark
+
+    suspend fun setDarkTheme(dark: Boolean) {
+        dataStore.edit { prefs -> prefs[IS_DARK_THEME_KEY] = dark }
+    }
+
+
     /** Emits the currently saved End-of-Day minute (default 0) */
     val endOfDayMinute: Flow<Int> = dataStore.data.map { prefs ->
         prefs[Keys.EOD_MINUTE] ?: DEFAULT_EOD_MINUTE
@@ -42,5 +51,7 @@ class PreferencesManager @Inject constructor(
     companion object {
         const val DEFAULT_EOD_HOUR   = 21   // 9 PM
         const val DEFAULT_EOD_MINUTE = 0
+
+        private val IS_DARK_THEME_KEY = booleanPreferencesKey("is_dark_theme")
     }
 }

@@ -17,18 +17,32 @@ import com.nightcheck.ui.navigation.NightcheckNavGraph
 import com.nightcheck.ui.navigation.Screen
 import com.nightcheck.ui.theme.NightcheckTheme
 import dagger.hilt.android.AndroidEntryPoint
-
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.nightcheck.util.PreferencesManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import jakarta.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var preferencesManager: PreferencesManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val systemDark    = isSystemInDarkTheme()
-            // saveable so it survives configuration changes without re-reading isSystemInDarkTheme
-            var isDarkTheme   by remember { mutableStateOf(systemDark) }
-            val onThemeToggle = remember { { isDarkTheme = !isDarkTheme } }
+            val systemDark = isSystemInDarkTheme()
+            // Read persisted preference; fall back to system until pref loads
+            val isDarkTheme by preferencesManager.isDarkTheme
+                .collectAsStateWithLifecycle(initialValue = systemDark)
+
+            val onThemeToggle: () -> Unit = remember(isDarkTheme) {
+                {
+                    lifecycleScope.launch {
+                        preferencesManager.setDarkTheme(!isDarkTheme)
+                    }
+                }
+            }
 
             NightcheckTheme(
                 darkTheme     = isDarkTheme,
