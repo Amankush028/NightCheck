@@ -3,6 +3,8 @@ package com.nightcheck.ui.addeditnote
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nightcheck.billing.PremiumCache
+import com.nightcheck.billing.UsageTracker
 import com.nightcheck.domain.model.Note
 import com.nightcheck.domain.repository.NoteRepository
 import com.nightcheck.domain.usecase.SaveNoteUseCase
@@ -21,14 +23,20 @@ data class AddEditNoteUiState(
     val isItalic: Boolean = false,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Monetization
+    val showNoteLimitDialog: Boolean = false,
+    val showPaywall: Boolean = false,
+    val shouldShowSessionInterstitial: Boolean = false
 )
 
 @HiltViewModel
 class AddEditNoteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val noteRepository: NoteRepository,
-    private val saveNoteUseCase: SaveNoteUseCase
+    private val saveNoteUseCase: SaveNoteUseCase,
+    private val premiumCache: PremiumCache,
+    private val usageTracker: UsageTracker
 ) : ViewModel() {
 
     private val noteId: Long? = savedStateHandle
@@ -47,11 +55,11 @@ class AddEditNoteViewModel @Inject constructor(
         noteRepository.getNoteById(id)?.let { note ->
             _uiState.update {
                 it.copy(
-                    title = note.title,
-                    body = note.body,
+                    title    = note.title,
+                    body     = note.body,
                     isPinned = note.isPinned,
                     colorHex = note.colorHex,
-                    isBold = note.isBold,
+                    isBold   = note.isBold,
                     isItalic = note.isItalic,
                     isLoading = false
                 )
@@ -60,11 +68,16 @@ class AddEditNoteViewModel @Inject constructor(
     }
 
     fun onTitleChange(v: String) = _uiState.update { it.copy(title = v) }
-    fun onBodyChange(v: String) = _uiState.update { it.copy(body = v) }
-    fun togglePin() = _uiState.update { it.copy(isPinned = !it.isPinned) }
+    fun onBodyChange(v: String)  = _uiState.update { it.copy(body = v) }
+    fun togglePin()              = _uiState.update { it.copy(isPinned = !it.isPinned) }
     fun onColorChange(hex: String?) = _uiState.update { it.copy(colorHex = hex) }
-    fun toggleBold() = _uiState.update { it.copy(isBold = !it.isBold) }
-    fun toggleItalic() = _uiState.update { it.copy(isItalic = !it.isItalic) }
+    fun toggleBold()             = _uiState.update { it.copy(isBold = !it.isBold) }
+    fun toggleItalic()           = _uiState.update { it.copy(isItalic = !it.isItalic) }
+
+    fun dismissNoteLimitDialog() = _uiState.update { it.copy(showNoteLimitDialog = false) }
+    fun dismissPaywall()         = _uiState.update { it.copy(showPaywall = false) }
+    fun openPaywallFromLimit()   = _uiState.update { it.copy(showNoteLimitDialog = false, showPaywall = true) }
+    fun onSessionInterstitialShown() = _uiState.update { it.copy(shouldShowSessionInterstitial = false) }
 
     fun save() {
         val state = _uiState.value
@@ -74,17 +87,42 @@ class AddEditNoteViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
+                // ── Free tier limit check (new notes only) ─────────────────
+                if (noteId == null) {
+                    val isPremium = premiumCache.isCurrentlyPremium()
+                    if (!isPremium) {
+                        val allNotes = noteRepository.observeAllNotes().first()
+                        if (allNotes.size >= UsageTracker.MAX_FREE_NOTES) {
+                            _uiState.update { it.copy(showNoteLimitDialog = true) }
+                            return@launch
+                        }
+                    }
+                }
+
                 saveNoteUseCase(
                     Note(
-                        id = noteId ?: 0L,
-                        title = state.title.trim(),
-                        body = state.body.trim(),
+                        id       = noteId ?: 0L,
+                        title    = state.title.trim(),
+                        body     = state.body.trim(),
                         isPinned = state.isPinned,
                         colorHex = state.colorHex,
-                        isBold = state.isBold,
+                        isBold   = state.isBold,
                         isItalic = state.isItalic
                     )
                 )
+
+                // ── Session interstitial ───────────────────────────────────
+                if (noteId == null) {
+                    val isPremium = premiumCache.isCurrentlyPremium()
+                    if (!isPremium) {
+                        val count = usageTracker.incrementSessionAdds()
+                        if (count == UsageTracker.SESSION_INTERSTITIAL_THRESHOLD) {
+                            _uiState.update { it.copy(shouldShowSessionInterstitial = true) }
+                            return@launch
+                        }
+                    }
+                }
+
                 _uiState.update { it.copy(isSaved = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = "Failed to save note") }

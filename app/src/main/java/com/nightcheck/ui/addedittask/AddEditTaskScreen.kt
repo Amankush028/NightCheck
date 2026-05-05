@@ -38,6 +38,9 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import com.nightcheck.ads.AdManager
+import com.nightcheck.ui.monetization.MonetizationHooks
+import com.nightcheck.ui.paywall.PaywallReason
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -222,7 +225,25 @@ fun AddEditTaskScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
+    val adManager: AdManager = hiltViewModel</* application */ >()
+// Better: inject AdManager via constructor or pass from NavGraph
+
+    MonetizationHooks(
+        showLimitDialog        = uiState.showTaskLimitDialog,
+        showPaywall            = uiState.showPaywall,
+        shouldShowInterstitial = uiState.shouldShowSessionInterstitial,
+        paywallReason          = PaywallReason.TaskLimit,
+        limitDialogTitle       = "Task limit reached",
+        limitDialogMessage     = "Free accounts support up to 7 tasks.",
+        onDismissLimitDialog   = viewModel::dismissTaskLimitDialog,
+        onUpgradeFromLimitDialog = viewModel::openPaywallFromLimit,
+        onDismissPaywall       = viewModel::dismissPaywall,
+        onInterstitialShown    = viewModel::onSessionInterstitialShown,
+        adManager              = adManager,
+        onContinueAfterInterstitial = { onNavigateUp() }
+    )
 }
+
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
 

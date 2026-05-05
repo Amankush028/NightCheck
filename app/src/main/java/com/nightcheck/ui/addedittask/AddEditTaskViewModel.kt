@@ -3,6 +3,8 @@ package com.nightcheck.ui.addedittask
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nightcheck.billing.PremiumCache
+import com.nightcheck.billing.UsageTracker
 import com.nightcheck.domain.model.Priority
 import com.nightcheck.domain.model.Task
 import com.nightcheck.domain.model.TaskStatus
@@ -14,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -25,20 +28,21 @@ import javax.inject.Inject
 data class AddEditTaskUiState(
     val title: String = "",
     val description: String = "",
-    // One-time mode
     val dueDate: LocalDate? = LocalDate.now(),
-    val dueTime: LocalTime? = null,          // optional time for one-time tasks
-    // Recurring mode
+    val dueTime: LocalTime? = null,
     val recurringDays: Set<DayOfWeek> = emptySet(),
     val recurringTime: LocalTime = LocalTime.of(9, 0),
-    // Shared
     val isRecurring: Boolean = false,
     val priority: Priority = Priority.MEDIUM,
     val status: TaskStatus = TaskStatus.PENDING,
     val reminderTime: LocalDateTime? = null,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    // Monetization
+    val showTaskLimitDialog: Boolean = false,
+    val showPaywall: Boolean = false,
+    val shouldShowSessionInterstitial: Boolean = false
 )
 
 @HiltViewModel
@@ -46,7 +50,9 @@ class AddEditTaskViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val taskRepository: TaskRepository,
     private val saveTaskUseCase: SaveTaskUseCase,
-    private val deleteTaskUseCase: DeleteTaskUseCase
+    private val deleteTaskUseCase: DeleteTaskUseCase,
+    private val premiumCache: PremiumCache,
+    private val usageTracker: UsageTracker
 ) : ViewModel() {
 
     private val taskId: Long? = savedStateHandle
@@ -68,17 +74,17 @@ class AddEditTaskViewModel @Inject constructor(
                 val isRecurring = task.recurringDays != null
                 _uiState.update { _ ->
                     AddEditTaskUiState(
-                        title        = task.title,
-                        description  = task.description ?: "",
-                        dueDate      = if (isRecurring) null else task.dueDate,
-                        dueTime      = null,
+                        title         = task.title,
+                        description   = task.description ?: "",
+                        dueDate       = if (isRecurring) null else task.dueDate,
+                        dueTime       = null,
                         recurringDays = task.recurringDays ?: emptySet(),
                         recurringTime = task.recurringTime ?: LocalTime.of(9, 0),
-                        isRecurring  = isRecurring,
-                        priority     = task.priority,
-                        status       = task.status,
-                        reminderTime = task.reminderTime,
-                        isLoading    = false
+                        isRecurring   = isRecurring,
+                        priority      = task.priority,
+                        status        = task.status,
+                        reminderTime  = task.reminderTime,
+                        isLoading     = false
                     )
                 }
             } else {
@@ -89,13 +95,13 @@ class AddEditTaskViewModel @Inject constructor(
         }
     }
 
-    fun onTitleChange(value: String) = _uiState.update { it.copy(title = value) }
-    fun onDescriptionChange(value: String) = _uiState.update { it.copy(description = value) }
-    fun onDueDateChange(value: LocalDate?) = _uiState.update { it.copy(dueDate = value) }
-    fun onDueTimeChange(value: LocalTime?) = _uiState.update { it.copy(dueTime = value) }
-    fun onRecurringTimeChange(time: LocalTime) = _uiState.update { it.copy(recurringTime = time) }
-    fun onPriorityChange(value: Priority) = _uiState.update { it.copy(priority = value) }
-    fun onReminderTimeChange(value: LocalDateTime?) = _uiState.update { it.copy(reminderTime = value) }
+    fun onTitleChange(value: String)         = _uiState.update { it.copy(title = value) }
+    fun onDescriptionChange(value: String)   = _uiState.update { it.copy(description = value) }
+    fun onDueDateChange(value: LocalDate?)   = _uiState.update { it.copy(dueDate = value) }
+    fun onDueTimeChange(value: LocalTime?)   = _uiState.update { it.copy(dueTime = value) }
+    fun onRecurringTimeChange(t: LocalTime)  = _uiState.update { it.copy(recurringTime = t) }
+    fun onPriorityChange(value: Priority)    = _uiState.update { it.copy(priority = value) }
+    fun onReminderTimeChange(v: LocalDateTime?) = _uiState.update { it.copy(reminderTime = v) }
 
     fun toggleRecurringDay(day: DayOfWeek) {
         _uiState.update { state ->
@@ -109,10 +115,15 @@ class AddEditTaskViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isRecurring = isRecurring,
-                dueDate = if (isRecurring) null else LocalDate.now()
+                dueDate     = if (isRecurring) null else LocalDate.now()
             )
         }
     }
+
+    fun dismissTaskLimitDialog()  = _uiState.update { it.copy(showTaskLimitDialog = false) }
+    fun dismissPaywall()          = _uiState.update { it.copy(showPaywall = false) }
+    fun openPaywallFromLimit()    = _uiState.update { it.copy(showTaskLimitDialog = false, showPaywall = true) }
+    fun onSessionInterstitialShown() = _uiState.update { it.copy(shouldShowSessionInterstitial = false) }
 
     fun save() {
         val state = _uiState.value
@@ -127,10 +138,21 @@ class AddEditTaskViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // For one-time tasks with a time, combine date+time into reminderTime
-                // if no explicit reminder was set by the user.
+                // ── Free tier limit check (only for NEW tasks, not edits) ──
+                if (taskId == null) {
+                    val isPremium = premiumCache.isCurrentlyPremium()
+                    if (!isPremium) {
+                        val allTasks = taskRepository.observeAllTasks().first()
+                        val activeCount = allTasks.count { it.status != TaskStatus.COMPLETED }
+                        if (activeCount >= UsageTracker.MAX_FREE_TASKS) {
+                            _uiState.update { it.copy(isLoading = false, showTaskLimitDialog = true) }
+                            return@launch
+                        }
+                    }
+                }
+
                 val effectiveReminder = when {
-                    state.reminderTime != null -> state.reminderTime
+                    state.reminderTime != null                                     -> state.reminderTime
                     !state.isRecurring && state.dueDate != null && state.dueTime != null ->
                         LocalDateTime.of(state.dueDate, state.dueTime)
                     else -> null
@@ -148,6 +170,19 @@ class AddEditTaskViewModel @Inject constructor(
                     reminderTime  = effectiveReminder
                 )
                 saveTaskUseCase(task)
+
+                // ── Session interstitial (new tasks only, free tier) ──────
+                if (taskId == null) {
+                    val isPremium = premiumCache.isCurrentlyPremium()
+                    if (!isPremium) {
+                        val count = usageTracker.incrementSessionAdds()
+                        if (count == UsageTracker.SESSION_INTERSTITIAL_THRESHOLD) {
+                            _uiState.update { it.copy(isLoading = false, shouldShowSessionInterstitial = true) }
+                            return@launch
+                        }
+                    }
+                }
+
                 _uiState.update { it.copy(isLoading = false, isSaved = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = "Failed to save task") }

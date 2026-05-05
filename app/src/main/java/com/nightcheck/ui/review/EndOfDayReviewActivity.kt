@@ -36,6 +36,10 @@ import java.time.format.DateTimeFormatter
 import com.nightcheck.util.PreferencesManager
 import jakarta.inject.Inject
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.lifecycle.lifecycleScope
+import com.nightcheck.ads.AdManager
+import com.nightcheck.billing.PremiumCache
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class EndOfDayReviewActivity : ComponentActivity() {
@@ -43,17 +47,25 @@ class EndOfDayReviewActivity : ComponentActivity() {
     private val viewModel: EndOfDayReviewViewModel by viewModels()
 
     @Inject lateinit var preferencesManager: PreferencesManager
+    @Inject lateinit var premiumCache: PremiumCache
+    @Inject lateinit var adManager: AdManager
+
+    private var interstitialShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // ... window flags same as before ...
         enableEdgeToEdge()
-        setContent {
-            val systemDark = isSystemInDarkTheme()
-            val isDarkTheme by preferencesManager.isDarkTheme
-                .collectAsStateWithLifecycle(initialValue = systemDark)
 
-            NightcheckTheme(darkTheme = isDarkTheme) {   // no toggle needed here
+        // Show interstitial before revealing the review UI (free tier only)
+        // We check synchronously from DataStore's cached value — no coroutine needed.
+        showEodInterstitialIfNeeded()
+
+        setContent {
+            val systemDark  = isSystemInDarkTheme()
+            val isDarkTheme = preferencesManager.isDarkTheme
+                .collectAsStateWithLifecycle(initialValue = systemDark).value
+
+            NightcheckTheme(darkTheme = isDarkTheme) {
                 EndOfDayReviewScreen(
                     viewModel = viewModel,
                     onFinish  = { finish() }
@@ -61,7 +73,22 @@ class EndOfDayReviewActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun showEodInterstitialIfNeeded() {
+        if (interstitialShown) return
+        lifecycleScope.launch {
+            val isPremium = premiumCache.isCurrentlyPremium()
+            if (!isPremium) {
+                interstitialShown = true
+                adManager.showInterstitialIfReady(this@EndOfDayReviewActivity)
+            }
+        }
+    }
 }
+
+
+
+
 
 @Composable
 private fun EndOfDayReviewScreen(

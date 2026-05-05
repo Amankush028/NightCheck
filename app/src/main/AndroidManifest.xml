@@ -19,6 +19,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Nightcheck">
 
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+
+
         <!-- Main Entry Activity -->
         <activity
             android:name=".ui.MainActivity"

@@ -16,6 +16,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["admobAppId"] = "ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -88,4 +89,11 @@ dependencies {
     // Glance Widgets
     implementation(libs.glance.appwidget)
     implementation(libs.glance.material3)
+
+    // Google Play Billing Library v7
+    implementation("com.android.billingclient:billing-ktx:7.0.0")
+
+    // Google Mobile Ads (AdMob) SDK
+    implementation("com.google.android.gms:play-services-ads:23.3.0")
+
 }

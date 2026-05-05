@@ -13,6 +13,13 @@ import com.nightcheck.ui.home.HomeScreen
 import com.nightcheck.ui.notes.NotesScreen
 import com.nightcheck.ui.settings.SettingsScreen
 import com.nightcheck.ui.tasks.TasksScreen
+import com.nightcheck.ads.AdManager
+import com.nightcheck.ui.monetization.MonetizationHooks
+import com.nightcheck.ui.paywall.PaywallReason
+import dagger.hilt.android.EntryPointAccessors
+import androidx.compose.ui.platform.LocalContext
+import kotlin.jvm.java
+
 
 @Composable
 fun NightcheckNavGraph(
@@ -38,6 +45,11 @@ fun NightcheckNavGraph(
                 }
             )
         }
+
+        val adManager: AdManager = EntryPointAccessors.fromApplication(
+            LocalContext.current.applicationContext,
+            AdEntryPoint::class.java
+        ).adManager()
 
         // ── Tasks ─────────────────────────────────────────────────────────────
         composable(route = Screen.Tasks.route) {
@@ -106,4 +118,5 @@ fun NightcheckNavGraph(
             )
         }
     }
+
 }
