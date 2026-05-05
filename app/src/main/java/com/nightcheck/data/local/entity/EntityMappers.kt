@@ -50,11 +50,13 @@ fun Task.toEntity(): TaskEntity = TaskEntity(
 // ── NoteEntity ↔ Note ────────────────────────────────────────────────────────
 
 fun NoteEntity.toDomain(): Note = Note(
-    id = id,
-    title = title,
-    body = body,
-    isPinned = isPinned,
-    colorHex = colorHex,
+    id        = id,
+    title     = title,
+    body      = body,
+    isPinned  = isPinned,
+    colorHex  = colorHex,
+    isBold    = isBold,      // add this
+    isItalic  = isItalic,    // add this
     createdAt = createdAtMillis.toLocalDateTime(),
     updatedAt = updatedAtMillis.toLocalDateTime()
 )
@@ -65,6 +67,8 @@ fun Note.toEntity(): NoteEntity = NoteEntity(
     body = body,
     isPinned = isPinned,
     colorHex = colorHex,
+    isBold   = isBold,
+    isItalic = isItalic,
     createdAtMillis = createdAt.toEpochMillis(),
     updatedAtMillis = updatedAt.toEpochMillis()
 )

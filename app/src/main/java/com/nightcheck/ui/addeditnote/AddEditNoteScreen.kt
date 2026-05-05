@@ -24,18 +24,19 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.nightcheck.ui.theme.LocalNightcheckColors
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import com.nightcheck.ads.AdManager
 import com.nightcheck.ui.monetization.MonetizationHooks
 import com.nightcheck.ui.paywall.PaywallReason
+import com.nightcheck.ui.theme.LocalNightcheckColors
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditNoteScreen(
     noteId: Long?,
     onNavigateUp: () -> Unit,
+    adManager: AdManager,
     viewModel: AddEditNoteViewModel = hiltViewModel()
 ) {
     val uiState   by viewModel.uiState.collectAsStateWithLifecycle()
@@ -201,28 +202,25 @@ fun AddEditNoteScreen(
             )
         }
     }
-    val adManager: AdManager = hiltViewModel</* application */ >()
-// Better: inject AdManager via constructor or pass from NavGraph
 
     MonetizationHooks(
-        showLimitDialog        = uiState.showNoteLimitDialog,
-        showPaywall            = uiState.showPaywall,
-        shouldShowInterstitial = uiState.shouldShowSessionInterstitial,
-        paywallReason          = PaywallReason.TaskLimit,
-        limitDialogTitle       = "Task limit reached",
-        limitDialogMessage     = "Free accounts support up to 10 tasks.",
-        onDismissLimitDialog   = viewModel::dismissNoteLimitDialog,
-        onUpgradeFromLimitDialog = viewModel::openPaywallFromLimit,
-        onDismissPaywall       = viewModel::dismissPaywall,
-        onInterstitialShown    = viewModel::onSessionInterstitialShown,
-        adManager              = adManager,
+        showLimitDialog             = uiState.showNoteLimitDialog,
+        showPaywall                 = uiState.showPaywall,
+        shouldShowInterstitial      = uiState.shouldShowSessionInterstitial,
+        paywallReason               = PaywallReason.TaskLimit,
+        limitDialogTitle            = "Note limit reached",
+        limitDialogMessage          = "Free accounts support up to 10 notes.",
+        onDismissLimitDialog        = viewModel::dismissNoteLimitDialog,
+        onUpgradeFromLimitDialog    = viewModel::openPaywallFromLimit,
+        onDismissPaywall            = viewModel::dismissPaywall,
+        onInterstitialShown         = viewModel::onSessionInterstitialShown,
+        adManager                   = adManager,
         onContinueAfterInterstitial = { onNavigateUp() }
     )
 }
 
 @Composable
 fun ColorPickerRow(onColorSelected: (String?) -> Unit) {
-    // Null = default surface; others are per-note tints
     val colors = listOf(
         null,
         "#FFF8E1",

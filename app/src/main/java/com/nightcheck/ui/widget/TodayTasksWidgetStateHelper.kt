@@ -37,7 +37,7 @@ object TodayTasksWidgetStateHelper {
             .first()
             .filter { task ->
                 task.status == TaskStatus.PENDING &&
-                        (task.dueDate == null || task.dueDate.toEpochDay() == todayEpochDay)
+                        task.dueDate?.toEpochDay() == todayEpochDay
             }
     }
 }

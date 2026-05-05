@@ -1,4 +1,4 @@
-package com.aco.nightcheck.ui.navigation
+package com.nightcheck.ui.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

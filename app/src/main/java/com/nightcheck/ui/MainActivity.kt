@@ -12,7 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.aco.nightcheck.ui.navigation.NightcheckBottomBar
+import com.nightcheck.ui.navigation.NightcheckBottomBar
 import com.nightcheck.ui.navigation.NightcheckNavGraph
 import com.nightcheck.ui.navigation.Screen
 import com.nightcheck.ui.theme.NightcheckTheme
@@ -21,7 +21,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import com.nightcheck.util.PreferencesManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import jakarta.inject.Inject
+import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 

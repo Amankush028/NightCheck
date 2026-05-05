@@ -10,15 +10,15 @@ class UpdateTaskStatusUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(taskId: Long, status: TaskStatus) {
         val task = taskRepository.getTaskById(taskId) ?: return
-        
+
         if (task.recurringDays != null) {
-            // For recurring tasks, completing it sets the lastCompletedDate to today.
-            // We keep the status in DB as PENDING (or update it, but GetTodayTasksUseCase will override)
-            // Actually, setting it to COMPLETED in DB is fine too.
+            // For recurring tasks, never store COMPLETED in DB.
+            // Completion is tracked via lastCompletedDate only.
+            // The repository layer derives the display status from that field.
             val lastCompleted = if (status == TaskStatus.COMPLETED) LocalDate.now() else null
             taskRepository.saveTask(
                 task.copy(
-                    status = status,
+                    status            = TaskStatus.PENDING,  // always keep as PENDING in DB
                     lastCompletedDate = lastCompleted
                 )
             )

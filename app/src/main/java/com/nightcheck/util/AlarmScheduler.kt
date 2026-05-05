@@ -1,4 +1,4 @@
-package com.aco.nightcheck.util
+package com.nightcheck.util
 
 import android.app.AlarmManager
 import android.app.PendingIntent

@@ -30,6 +30,8 @@ import com.nightcheck.domain.model.Priority
 import com.nightcheck.domain.model.Task
 import com.nightcheck.domain.model.TaskStatus
 import com.nightcheck.ui.theme.LocalNightcheckColors
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TaskCard
@@ -384,7 +386,14 @@ private fun NoteTagChip(label: String) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Date formatter — wire up note.updatedAt / createdAt when available
 // ─────────────────────────────────────────────────────────────────────────────
-
 private fun formatNoteDate(note: Note): String {
-    return "Today" // Replace with: note.updatedAt.format(DateTimeFormatter...) etc.
+    val today     = LocalDate.now()
+    val yesterday = today.minusDays(1)
+    val noteDate  = note.updatedAt.toLocalDate()
+
+    return when (noteDate) {
+        today     -> "Today"
+        yesterday -> "Yesterday"
+        else      -> noteDate.format(DateTimeFormatter.ofPattern("MMM d, yyyy"))
+    }
 }

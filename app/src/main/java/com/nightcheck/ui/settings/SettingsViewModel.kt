@@ -2,7 +2,7 @@ package com.nightcheck.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aco.nightcheck.util.AlarmScheduler
+import com.nightcheck.util.AlarmScheduler
 import com.nightcheck.util.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*

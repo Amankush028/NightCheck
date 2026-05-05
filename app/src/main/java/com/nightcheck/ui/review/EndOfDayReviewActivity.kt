@@ -34,7 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.nightcheck.util.PreferencesManager
-import jakarta.inject.Inject
+import javax.inject.Inject
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.lifecycle.lifecycleScope
 import com.nightcheck.ads.AdManager
@@ -56,10 +56,6 @@ class EndOfDayReviewActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Show interstitial before revealing the review UI (free tier only)
-        // We check synchronously from DataStore's cached value — no coroutine needed.
-        showEodInterstitialIfNeeded()
-
         setContent {
             val systemDark  = isSystemInDarkTheme()
             val isDarkTheme = preferencesManager.isDarkTheme
@@ -72,6 +68,7 @@ class EndOfDayReviewActivity : ComponentActivity() {
                 )
             }
         }
+        showEodInterstitialIfNeeded()
     }
 
     private fun showEodInterstitialIfNeeded() {

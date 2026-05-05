@@ -41,7 +41,7 @@ class TasksViewModel @Inject constructor(
             // at the repository layer — no extra suppression needed here.
             val taskFlow: Flow<List<Task>> = when (filter) {
                 TaskFilter.TODAY -> taskRepository.observeTasksForDay(today)
-                    .map { tasks -> tasks.filter { it.status != TaskStatus.COMPLETED } }
+                    .map { tasks -> tasks.filter { it.status != TaskStatus.SNOOZED } }
 
                 TaskFilter.UPCOMING -> taskRepository.observeUpcomingTasks(today)
 

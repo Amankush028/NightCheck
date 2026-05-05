@@ -42,12 +42,3 @@ class MarkTaskCompleteAction : ActionCallback {
         val taskIdKey = ActionParameters.Key<Long>("task_id")
     }
 }
-
-/**
- * Hilt EntryPoint for accessing the graph from non-Hilt-managed components (widgets).
- */
-@EntryPoint
-@InstallIn(SingletonComponent::class)
-interface WidgetEntryPoint {
-    fun taskRepository(): TaskRepository
-}
