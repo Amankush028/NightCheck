@@ -8,36 +8,30 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
 /**
- * Helper object that retrieves today's tasks for the widget's provideGlance() call.
+ * Helper that retrieves today's tasks for the widget's provideGlance() call.
  * Bridges the non-Hilt Glance world with the Hilt dependency graph.
  *
- * FIX 1: Use EntryPointAccessors.fromApplication() (not EntryPoints.get()) because
- *         WidgetEntryPoint is @InstallIn(SingletonComponent::class). Using the wrong
- *         accessor caused a crash/hang → infinite loading screen.
+ * Uses observeTasksForDay() which already handles:
+ *  - Dated tasks whose dueDateEpochDay == today
+ *  - Recurring tasks whose recurringDays includes today's DayOfWeek
  *
- * FIX 2: Call observeAllTasks() and filter client-side instead of relying on
- *         observeTasksForDay() which (a) may not exist on the interface and (b) was
- *         previously shown to silently drop tasks with a null due date.
+ * We then filter client-side to PENDING only, matching what the Home screen shows.
  */
 object TodayTasksWidgetStateHelper {
 
     suspend fun getTodayTasks(context: Context): List<Task> {
-        // FIX 1: correct accessor for SingletonComponent entry points
         val entryPoint = EntryPointAccessors.fromApplication(
             context.applicationContext,
             WidgetEntryPoint::class.java
         )
 
-        val todayEpochDay = LocalDate.now().toEpochDay()
+        val today = LocalDate.now()
 
-        // FIX 2: collect all tasks then filter, mirroring the GetTodayTasksUseCase fix
-        // that includes tasks with a null due date alongside today's dated tasks.
+        // observeTasksForDay already unions dated + recurring tasks and
+        // derives status for recurring tasks from lastCompletedDate.
         return entryPoint.taskRepository()
-            .observeAllTasks()
+            .observeTasksForDay(today)
             .first()
-            .filter { task ->
-                task.status == TaskStatus.PENDING &&
-                        task.dueDate?.toEpochDay() == todayEpochDay
-            }
+            .filter { task -> task.status == TaskStatus.PENDING }
     }
 }

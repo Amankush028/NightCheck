@@ -10,7 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
@@ -112,7 +112,7 @@ fun AddEditTaskScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onNavigateUp) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = scheme.onBackground)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = scheme.onBackground)
                 }
                 Text(
                     text      = if (isEditing) "Edit Task" else "New Task",
@@ -233,8 +233,8 @@ fun AddEditTaskScreen(
         showPaywall                 = uiState.showPaywall,
         shouldShowInterstitial      = uiState.shouldShowSessionInterstitial,
         paywallReason               = PaywallReason.TaskLimit,
-        limitDialogTitle            = "Note limit reached",
-        limitDialogMessage          = "Free accounts support up to 10 notes.",
+        limitDialogTitle            = "Task limit reached",
+        limitDialogMessage          = "Free accounts support up to ${com.nightcheck.billing.UsageTracker.MAX_FREE_TASKS} active tasks. Upgrade to add unlimited tasks.",
         onDismissLimitDialog        = viewModel::dismissTaskLimitDialog,
         onUpgradeFromLimitDialog    = viewModel::openPaywallFromLimit,
         onDismissPaywall            = viewModel::dismissPaywall,

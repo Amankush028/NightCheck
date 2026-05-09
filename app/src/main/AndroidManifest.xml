@@ -65,7 +65,7 @@
 
         <!-- Today's Tasks Widget (4x2) -->
         <receiver
-            android:name=".ui.widget.TodayTasksWidget"
+            android:name=".ui.widget.TodayTasksWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -77,7 +77,7 @@
 
         <!-- Quick Add Widget (4x1) -->
         <receiver
-            android:name=".ui.widget.QuickAddWidget"
+            android:name=".ui.widget.QuickAddWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

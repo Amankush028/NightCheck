@@ -13,7 +13,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -186,7 +186,7 @@ fun NotesScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            if (isGridView) Icons.Default.List else Icons.Default.GridView,
+                            if (isGridView) Icons.AutoMirrored.Filled.List else Icons.Default.GridView,
                             contentDescription = null,
                             tint     = nc.textMuted,
                             modifier = Modifier.size(16.dp)
@@ -254,7 +254,8 @@ fun NotesScreen(
                     NoteCard(
                         note         = note,
                         onClick      = { onNavigateToNote(note.id) },
-                        onTogglePin  = { viewModel.togglePin(note) }
+                        onTogglePin  = { viewModel.togglePin(note) },
+                        modifier     = Modifier.animateItem()
                     )
                 }
 
@@ -279,7 +280,8 @@ fun NotesScreen(
                     NoteCard(
                         note        = note,
                         onClick     = { onNavigateToNote(note.id) },
-                        onTogglePin = { viewModel.togglePin(note) }
+                        onTogglePin = { viewModel.togglePin(note) },
+                        modifier    = Modifier.animateItem()
                     )
                 }
             }

@@ -5,10 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import com.nightcheck.util.PreferencesManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import javax.inject.Inject
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -32,7 +33,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val systemDark = isSystemInDarkTheme()
-            // Read persisted preference; fall back to system until pref loads
             val isDarkTheme by preferencesManager.isDarkTheme
                 .collectAsStateWithLifecycle(initialValue = systemDark)
 
@@ -52,22 +52,23 @@ class MainActivity : ComponentActivity() {
                 val backStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute   = backStackEntry?.destination?.route
 
-                // remember so it doesn't recompute the set on every recomposition
                 val bottomNavRoutes = remember { Screen.bottomNavItems.map { it.route }.toHashSet() }
                 val showBottomBar   = currentRoute in bottomNavRoutes
 
-                Scaffold(
-                    modifier    = Modifier.fillMaxSize(),
-                    bottomBar   = {
-                        if (showBottomBar) {
-                            NightcheckBottomBar(navController = navController)
-                        }
-                    }
-                ) { innerPadding ->
+                // Use a Box instead of Scaffold so the floating nav bar has NO
+                // built-in background Surface — it floats freely over content.
+                Box(modifier = Modifier.fillMaxSize()) {
                     NightcheckNavGraph(
                         navController = navController,
-                        modifier      = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
+                        modifier      = Modifier.fillMaxSize()
                     )
+
+                    if (showBottomBar) {
+                        NightcheckBottomBar(
+                            navController = navController,
+                            modifier      = Modifier.align(Alignment.BottomCenter)
+                        )
+                    }
                 }
             }
         }

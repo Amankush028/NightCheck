@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +40,9 @@ class TaskRepositoryImpl @Inject constructor(
         val epochDay  = date.toEpochDay()
         val dayOfWeek = date.dayOfWeek.value // 1=Mon … 7=Sun
 
+        // Reset snoozed tasks whose due date has arrived before emitting
         val datedFlow = taskDao.observeTasksForDay(epochDay)
+            .onStart { taskDao.resetSnoozedTasksForDay(epochDay) }
             .distinctUntilChanged()
 
         // Recurring tasks are a small subset — filter them from the full list
@@ -106,4 +109,7 @@ class TaskRepositoryImpl @Inject constructor(
 
     override suspend fun deleteOldCompletedTasks(thresholdMillis: Long) =
         taskDao.deleteOldCompletedTasks(thresholdMillis)
+
+    override suspend fun resetSnoozedTasks(today: LocalDate) =
+        taskDao.resetSnoozedTasksForDay(today.toEpochDay())
 }

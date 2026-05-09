@@ -1,5 +1,13 @@
 package com.nightcheck.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +19,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +69,33 @@ fun TaskCard(
         }
     }
 
+    // ── Animated colors for smooth completion transitions ──────────────────
+    val checkboxBg by animateColorAsState(
+        targetValue   = if (isDone) scheme.primary else Color.Transparent,
+        animationSpec = tween(300),
+        label         = "checkboxBg"
+    )
+    val checkboxBorder by animateColorAsState(
+        targetValue   = if (isDone) scheme.primary else scheme.outline,
+        animationSpec = tween(300),
+        label         = "checkboxBorder"
+    )
+    val titleColor by animateColorAsState(
+        targetValue   = if (isDone) nc.textFaint else scheme.onSurface,
+        animationSpec = tween(300),
+        label         = "titleColor"
+    )
+    val tagAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue   = if (isDone) 0.4f else 1f,
+        animationSpec = tween(300),
+        label         = "tagAlpha"
+    )
+    val tagBgAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue   = if (isDone) 0.08f else 0.15f,
+        animationSpec = tween(300),
+        label         = "tagBgAlpha"
+    )
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -74,22 +110,29 @@ fun TaskCard(
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Animated checkbox
             Box(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
-                    .background(if (isDone) scheme.primary else Color.Transparent)
-                    .border(2.dp, if (isDone) scheme.primary else scheme.outline, CircleShape)
+                    .background(checkboxBg)
+                    .border(2.dp, checkboxBorder, CircleShape)
                     .clickable(onClick = onCheckboxClick),
                 contentAlignment = Alignment.Center
             ) {
-                if (isDone) {
-                    Icon(
-                        imageVector        = Icons.Default.Check,
-                        contentDescription = "Done",
-                        tint               = scheme.onPrimary,
-                        modifier           = Modifier.size(16.dp)
-                    )
+                androidx.compose.animation.Crossfade(
+                    targetState   = isDone,
+                    animationSpec = tween(250),
+                    label         = "taskCheckCrossfade"
+                ) { done ->
+                    if (done) {
+                        Icon(
+                            imageVector        = Icons.Default.Check,
+                            contentDescription = "Done",
+                            tint               = scheme.onPrimary,
+                            modifier           = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
 
@@ -100,7 +143,7 @@ fun TaskCard(
                     text           = task.title,
                     fontSize       = 16.sp,
                     fontWeight     = FontWeight.Bold,
-                    color          = if (isDone) nc.textFaint else scheme.onSurface,
+                    color          = titleColor,
                     textDecoration = if (isDone) TextDecoration.LineThrough else null,
                     maxLines       = 1,
                     overflow       = TextOverflow.Ellipsis
@@ -121,14 +164,14 @@ fun TaskCard(
             Box(
                 modifier = Modifier
                     .background(
-                        scheme.primary.copy(alpha = if (isDone) 0.08f else 0.15f),
+                        scheme.primary.copy(alpha = tagBgAlpha),
                         RoundedCornerShape(12.dp)
                     )
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
                     text          = tagLabel,
-                    color         = scheme.primary.copy(alpha = if (isDone) 0.4f else 1f),
+                    color         = scheme.primary.copy(alpha = tagAlpha),
                     fontSize      = 11.sp,
                     fontWeight    = FontWeight.Bold,
                     letterSpacing = 0.5.sp

@@ -68,6 +68,7 @@ fun AddEditNoteScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .statusBarsPadding()
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -207,9 +208,9 @@ fun AddEditNoteScreen(
         showLimitDialog             = uiState.showNoteLimitDialog,
         showPaywall                 = uiState.showPaywall,
         shouldShowInterstitial      = uiState.shouldShowSessionInterstitial,
-        paywallReason               = PaywallReason.TaskLimit,
+        paywallReason               = PaywallReason.NoteLimit,
         limitDialogTitle            = "Note limit reached",
-        limitDialogMessage          = "Free accounts support up to 10 notes.",
+        limitDialogMessage          = "Free accounts support up to ${com.nightcheck.billing.UsageTracker.MAX_FREE_NOTES} notes. Upgrade for unlimited notes.",
         onDismissLimitDialog        = viewModel::dismissNoteLimitDialog,
         onUpgradeFromLimitDialog    = viewModel::openPaywallFromLimit,
         onDismissPaywall            = viewModel::dismissPaywall,

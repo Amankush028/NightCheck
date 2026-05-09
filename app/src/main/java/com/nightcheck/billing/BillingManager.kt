@@ -69,19 +69,28 @@ class BillingManager @Inject constructor(
 
     // ── Connection ────────────────────────────────────────────────────────────
 
+    private var reconnectAttempts = 0
+
     private fun connectAndQuery() {
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
+                reconnectAttempts = 0 // reset on success
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     scope.launch { queryActivePurchases() }
                     queryProductDetails()
                 }
-
             }
 
             override fun onBillingServiceDisconnected() {
-                // Retry — simple backoff would be production-grade but scope is fine for now
-                connectAndQuery()
+                // Exponential backoff: 1s, 2s, 4s, 8s… capped at 5 retries
+                if (reconnectAttempts < 5) {
+                    val delayMs = (1000L * (1L shl reconnectAttempts)).coerceAtMost(16_000L)
+                    reconnectAttempts++
+                    scope.launch {
+                        kotlinx.coroutines.delay(delayMs)
+                        connectAndQuery()
+                    }
+                }
             }
         })
     }

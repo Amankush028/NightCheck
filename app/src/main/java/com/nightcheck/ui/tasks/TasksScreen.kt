@@ -138,16 +138,12 @@ fun TasksScreen(
                 }
             } else {
                 items(uiState.tasks, key = { it.id }) { task ->
-                    AnimatedVisibility(
-                        visible = true,
-                        enter   = fadeIn() + slideInVertically()
-                    ) {
-                        NightTaskCard(
-                            task           = task,
-                            onClick        = { onNavigateToTask(task.id) },
-                            onToggleStatus = { newStatus -> viewModel.toggleTaskStatus(task, newStatus) }
-                        )
-                    }
+                    NightTaskCard(
+                        task           = task,
+                        onClick        = { onNavigateToTask(task.id) },
+                        onToggleStatus = { newStatus -> viewModel.toggleTaskStatus(task, newStatus) },
+                        modifier       = Modifier.animateItem()
+                    )
                 }
                 item(key = "bottom_spacer") { Spacer(Modifier.height(24.dp)) }
             }
@@ -178,16 +174,27 @@ private fun TaskFilterTabRow(
             val isSelected = filter == selectedFilter
             val label = when (filter) {
                 TaskFilter.TODAY     -> "Today"
-                TaskFilter.UPCOMING  -> "Upcoming"
+                TaskFilter.UPCOMING -> "Upcoming"
                 TaskFilter.COMPLETED -> "Done"
             }
+
+            // Animate tab background and text color
+            val tabBg by androidx.compose.animation.animateColorAsState(
+                targetValue   = if (isSelected) nc.overlay else Color.Transparent,
+                animationSpec = tween(250),
+                label         = "tabBg_${filter.name}"
+            )
+            val tabTextColor by androidx.compose.animation.animateColorAsState(
+                targetValue   = if (isSelected) scheme.onSurface else nc.textMuted,
+                animationSpec = tween(250),
+                label         = "tabText_${filter.name}"
+            )
+
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(
-                        if (isSelected) nc.overlay else Color.Transparent
-                    )
+                    .background(tabBg)
                     .clickable { onFilterChange(filter) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
@@ -196,7 +203,7 @@ private fun TaskFilterTabRow(
                     text  = label,
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color      = if (isSelected) scheme.onSurface else nc.textMuted
+                        color      = tabTextColor
                     )
                 )
             }
@@ -267,7 +274,8 @@ private fun ProgressBanner(
 private fun NightTaskCard(
     task: Task,
     onClick: () -> Unit,
-    onToggleStatus: (TaskStatus) -> Unit
+    onToggleStatus: (TaskStatus) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val scheme      = MaterialTheme.colorScheme
     val nc          = LocalNightcheckColors.current
@@ -275,8 +283,20 @@ private fun NightTaskCard(
 
     val newStatus = if (isCompleted) TaskStatus.PENDING else TaskStatus.COMPLETED
 
+    // Animate title and icon colors
+    val titleColor by androidx.compose.animation.animateColorAsState(
+        targetValue   = if (isCompleted) nc.textMuted else scheme.onSurface,
+        animationSpec = tween(250),
+        label         = "nightTaskTitleColor"
+    )
+    val iconTint by androidx.compose.animation.animateColorAsState(
+        targetValue   = if (isCompleted) scheme.primary else nc.textMuted,
+        animationSpec = tween(250),
+        label         = "nightTaskIconTint"
+    )
+
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 6.dp)
             .clip(RoundedCornerShape(18.dp))
@@ -285,23 +305,20 @@ private fun NightTaskCard(
             .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Checkbox
+        // Animated checkbox
         IconButton(
             onClick  = { onToggleStatus(newStatus) },
             modifier = Modifier.size(36.dp)
         ) {
-            if (isCompleted) {
+            androidx.compose.animation.Crossfade(
+                targetState   = isCompleted,
+                animationSpec = tween(200),
+                label         = "nightTaskCheckbox"
+            ) { completed ->
                 Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = "Mark incomplete",
-                    tint               = scheme.primary,
-                    modifier           = Modifier.size(26.dp)
-                )
-            } else {
-                Icon(
-                    Icons.Default.RadioButtonUnchecked,
-                    contentDescription = "Mark complete",
-                    tint               = nc.textMuted,
+                    if (completed) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = if (completed) "Mark incomplete" else "Mark complete",
+                    tint               = iconTint,
                     modifier           = Modifier.size(26.dp)
                 )
             }
@@ -315,7 +332,7 @@ private fun NightTaskCard(
                 text           = task.title,
                 style          = MaterialTheme.typography.titleMedium.copy(
                     fontWeight      = FontWeight.SemiBold,
-                    color           = if (isCompleted) nc.textMuted else scheme.onSurface,
+                    color           = titleColor,
                     textDecoration  = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None
                 ),
                 maxLines       = 1,

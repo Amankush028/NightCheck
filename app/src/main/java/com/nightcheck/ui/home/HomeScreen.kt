@@ -172,12 +172,14 @@ fun HomeScreen(
                 }
             } else {
                 // Stable `key` means only changed items recompose, not the whole list
-                items(todayTasks, key = { it.id }) { task ->
+                items(todayTasks, key = { "task_${it.id}" }) { task ->
                     TaskCard(
                         task           = task,
                         onClick        = { onNavigateToTask(task.id) },
                         onToggleStatus = { newStatus -> viewModel.toggleTaskStatus(task, newStatus) },
-                        modifier       = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+                        modifier       = Modifier
+                            .animateItem()
+                            .padding(horizontal = 24.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -200,9 +202,10 @@ fun HomeScreen(
                     )
                 }
             } else {
-                items(chunkedNotes, key = { row -> row.first().id }) { rowNotes ->
+                items(chunkedNotes, key = { row -> "note_row_${row.first().id}" }) { rowNotes ->
                     Row(
                         modifier              = Modifier
+                            .animateItem()
                             .fillMaxWidth()
                             .padding(horizontal = 24.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)

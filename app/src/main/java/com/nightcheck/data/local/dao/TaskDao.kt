@@ -75,6 +75,18 @@ interface TaskDao {
     @Query("UPDATE tasks SET status = :status, updatedAtMillis = :now WHERE id = :id")
     suspend fun updateTaskStatus(id: Long, status: Int, now: Long = System.currentTimeMillis())
 
+    /**
+     * Resets SNOOZED tasks whose due date has arrived back to PENDING.
+     * Called on every observeTasksForDay() so snoozed tasks reappear
+     * when their rescheduled day comes.
+     */
+    @Query("""
+        UPDATE tasks 
+        SET status = 0, updatedAtMillis = :now 
+        WHERE status = 2 AND dueDateEpochDay <= :todayEpochDay
+    """)
+    suspend fun resetSnoozedTasksForDay(todayEpochDay: Long, now: Long = System.currentTimeMillis())
+
     /** Deletes completed tasks that were last updated before the given timestamp */
     @Query("DELETE FROM tasks WHERE status = 1 AND updatedAtMillis < :thresholdMillis")
     suspend fun deleteOldCompletedTasks(thresholdMillis: Long)

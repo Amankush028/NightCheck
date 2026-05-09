@@ -1,8 +1,13 @@
 package com.nightcheck.ui.navigation
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +31,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.nightcheck.ui.navigation.Screen
 import com.nightcheck.ui.theme.LocalNightcheckColors
 
 private data class NavItemConfig(
@@ -44,7 +48,10 @@ private val navItems = listOf(
 )
 
 @Composable
-fun NightcheckBottomBar(navController: NavController) {
+fun NightcheckBottomBar(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute    = backStackEntry?.destination?.route
     val scheme          = MaterialTheme.colorScheme
@@ -58,7 +65,7 @@ fun NightcheckBottomBar(navController: NavController) {
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 20.dp)
             .navigationBarsPadding()
@@ -95,7 +102,6 @@ fun NightcheckBottomBar(navController: NavController) {
                         item      = item,
                         selected  = selected,
                         glowBrush = glowBrush,
-                        tintColor = if (selected) scheme.primary else nc.textMuted,
                         onClick   = if (selected) ({}) else navigate
                     )
                 }
@@ -107,26 +113,47 @@ fun NightcheckBottomBar(navController: NavController) {
 /**
  * Extracted stable subcomposable — skips recomposition for items that haven't
  * changed selection state, since all its parameters are stable primitives.
+ * Now uses animated tint + glow size for a smooth selection transition.
  */
 @Composable
 private fun NavItem(
     item: NavItemConfig,
     selected: Boolean,
     glowBrush: Brush,
-    tintColor: Color,
     onClick: () -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val nc     = LocalNightcheckColors.current
+
+    // Smoothly animate the icon tint color
+    val tintColor by animateColorAsState(
+        targetValue   = if (selected) scheme.primary else nc.textMuted,
+        animationSpec = tween(250),
+        label         = "navItemTint"
+    )
+
+    // Smoothly animate the glow size
+    val glowSize by animateDpAsState(
+        targetValue   = if (selected) 36.dp else 0.dp,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
+        label         = "navItemGlow"
+    )
+
     Box(
         modifier         = Modifier
             .size(48.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ),
         contentAlignment = Alignment.Center
     ) {
-        if (selected) {
+        if (glowSize > 0.dp) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(glowSize)
                     .background(glowBrush)
             )
         }

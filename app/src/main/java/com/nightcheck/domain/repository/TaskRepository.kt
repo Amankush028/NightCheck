@@ -17,4 +17,5 @@ interface TaskRepository {
     suspend fun updateTaskStatus(id: Long, status: TaskStatus)
     suspend fun deleteTask(id: Long)
     suspend fun deleteOldCompletedTasks(thresholdMillis: Long)
+    suspend fun resetSnoozedTasks(today: LocalDate)
 }
