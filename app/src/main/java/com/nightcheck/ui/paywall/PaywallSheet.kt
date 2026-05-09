@@ -72,7 +72,7 @@ fun PaywallSheet(
         if (isPremium) onDismiss()
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartialExpansion = true)
+    val sheetState = rememberModalBottomSheetState()
 
     ModalBottomSheet(
         onDismissRequest   = onDismiss,

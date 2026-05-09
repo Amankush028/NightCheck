@@ -73,11 +73,10 @@ class BillingManager @Inject constructor(
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    scope.launch {
-                        queryActivePurchases()
-                        queryProductDetails()
-                    }
+                    scope.launch { queryActivePurchases() }
+                    queryProductDetails()
                 }
+
             }
 
             override fun onBillingServiceDisconnected() {
@@ -107,7 +106,7 @@ class BillingManager @Inject constructor(
 
     // ── Query product details for the paywall screen ──────────────────────────
 
-    private suspend fun queryProductDetails() {
+    private fun queryProductDetails() {
         val productList = SUBSCRIPTION_SKUS.map { sku ->
             QueryProductDetailsParams.Product.newBuilder()
                 .setProductId(sku)
@@ -118,9 +117,10 @@ class BillingManager @Inject constructor(
             .setProductList(productList)
             .build()
 
-        val result = billingClient.queryProductDetailsAsync(params)
-        if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-            _products.value = result.productDetailsList ?: emptyList()
+        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                _products.value = productDetailsList
+            }
         }
     }
 

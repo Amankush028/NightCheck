@@ -2,6 +2,7 @@ package com.nightcheck.ui.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.*
@@ -15,10 +16,10 @@ import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.*
-import androidx.glance.material3.GlanceTheme
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import com.nightcheck.domain.model.Task
 import com.nightcheck.domain.model.TaskStatus
 import com.nightcheck.ui.MainActivity
@@ -31,21 +32,17 @@ class TodayTasksWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val tasks = TodayTasksWidgetStateHelper.getTodayTasks(context)
         provideContent {
-            GlanceTheme {
-                TodayTasksWidgetContent(tasks = tasks)
-            }
+            TodayTasksWidgetContent(tasks = tasks)
         }
     }
 }
 
 @Composable
-private fun TodayTasksWidgetContent(tasks: List<Task>) {
-    // FIX 4: Removed greedy clickable from the root Column.
-    // The "open app" action is now only on the header Row.
+internal fun TodayTasksWidgetContent(tasks: List<Task>) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.surface)
+            .background(ColorProvider(Color(0xFF111111)))
             .padding(12.dp)
     ) {
         // Header — tapping this area opens the app
@@ -55,11 +52,10 @@ private fun TodayTasksWidgetContent(tasks: List<Task>) {
                 .clickable(actionStartActivity<MainActivity>()),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            @Suppress("DEPRECATION")
             Text(
                 text = "Today",
                 style = TextStyle(
-                    color = GlanceTheme.colors.primary,
+                    color = ColorProvider(Color(0xFFA78BFA)),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 ),
@@ -68,7 +64,7 @@ private fun TodayTasksWidgetContent(tasks: List<Task>) {
             Text(
                 text = "${tasks.count { it.status == TaskStatus.PENDING }} pending",
                 style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
+                    color = ColorProvider(Color(0xFFAAAAAA)),
                     fontSize = 12.sp
                 )
             )
@@ -84,7 +80,7 @@ private fun TodayTasksWidgetContent(tasks: List<Task>) {
                 Text(
                     text = "All done! ✓",
                     style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
+                        color = ColorProvider(Color(0xFFAAAAAA)),
                         fontSize = 13.sp
                     )
                 )
@@ -109,13 +105,12 @@ private fun TaskWidgetRow(task: Task) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Checkbox - no longer blocked by greedy parent
         Box(
             modifier = GlanceModifier
                 .size(20.dp)
                 .background(
-                    if (isDone) GlanceTheme.colors.primary
-                    else GlanceTheme.colors.surfaceVariant
+                    if (isDone) ColorProvider(Color(0xFFA78BFA))
+                    else ColorProvider(Color(0xFF1C1C24))
                 )
                 .clickable(
                     actionRunCallback<MarkTaskCompleteAction>(
@@ -132,9 +127,9 @@ private fun TaskWidgetRow(task: Task) {
             text = task.title,
             style = TextStyle(
                 color = if (isDone)
-                    GlanceTheme.colors.onSurfaceVariant
+                    ColorProvider(Color(0xFFAAAAAA))
                 else
-                    GlanceTheme.colors.onSurface,
+                    ColorProvider(Color(0xFFFFFFFF)),
                 fontSize = 13.sp
             ),
             maxLines = 1,

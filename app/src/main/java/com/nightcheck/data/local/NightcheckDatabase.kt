@@ -16,7 +16,7 @@ import com.nightcheck.data.local.entity.TaskEntity
         ReminderEntity::class
     ],
     version = 4,
-    exportSchema = true
+    exportSchema =false
 )
 abstract class NightcheckDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao

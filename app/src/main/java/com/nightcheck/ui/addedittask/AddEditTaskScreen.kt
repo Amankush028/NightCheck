@@ -42,11 +42,13 @@ import com.nightcheck.ads.AdManager
 import com.nightcheck.ui.monetization.MonetizationHooks
 import com.nightcheck.ui.paywall.PaywallReason
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditTaskScreen(
     taskId: Long?,
     onNavigateUp: () -> Unit,
+    adManager: AdManager,
     viewModel: AddEditTaskViewModel = hiltViewModel()
 ) {
     val uiState   by viewModel.uiState.collectAsStateWithLifecycle()
@@ -241,7 +243,6 @@ fun AddEditTaskScreen(
         onContinueAfterInterstitial = { onNavigateUp() }
     )
 }
-
 
 // ── Section wrapper ───────────────────────────────────────────────────────────
 

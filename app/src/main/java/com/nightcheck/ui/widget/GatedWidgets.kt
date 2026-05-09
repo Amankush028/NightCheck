@@ -12,7 +12,6 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.provideContent
 import androidx.glance.layout.*
-import androidx.glance.material3.GlanceTheme
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -28,7 +27,6 @@ import dagger.hilt.android.EntryPointAccessors
 class TodayTasksWidgetGated : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        // Check premium status from the local cache (no billing round-trip in widget)
         val premiumCache = EntryPointAccessors.fromApplication(
             context.applicationContext,
             WidgetEntryPoint::class.java
@@ -43,9 +41,7 @@ class TodayTasksWidgetGated : GlanceAppWidget() {
 
         val tasks = TodayTasksWidgetStateHelper.getTodayTasks(context)
         provideContent {
-            GlanceTheme {
-                TodayTasksWidgetContent(tasks = tasks)
-            }
+            TodayTasksWidgetContent(tasks = tasks)
         }
     }
 }

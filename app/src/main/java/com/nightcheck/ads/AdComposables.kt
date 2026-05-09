@@ -20,7 +20,7 @@ import com.google.android.gms.ads.nativead.NativeAdView
  */
 @Composable
 fun BannerAdView(
-    adUnitId: String = AdManager.AdUnitIds.BANNER,
+    adUnitId: String = AdManager.ca-app-pub-8523289380419686/9115996788,
     modifier: Modifier = Modifier
         .fillMaxWidth()
         .height(50.dp)
