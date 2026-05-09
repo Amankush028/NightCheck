@@ -20,6 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -36,11 +39,12 @@ import com.nightcheck.ui.paywall.PaywallSheet
 import com.nightcheck.ui.theme.LocalNightcheckColors
 
 /**
- * NotesScreen with:
- *  - Banner ad at the bottom (free tier only)
- *  - Note-limit enforcement via [AddEditNoteViewModel]'s showNoteLimitDialog flag
- *    (the limit check happens in the VM when Save is tapped in AddEditNoteScreen;
- *     the limit FAB guard here prevents even navigating to the add screen when full)
+ * NotesScreen redesigned to match HTML reference:
+ *  - Header with note count badge
+ *  - Pinned notes rendered as full-width cards with primary-color top border accent
+ *  - Banner ad inline after pinned section, styled like a pinned note card (free tier only)
+ *  - Unpinned notes in staggered 2-col grid
+ *  - No bottomBar ad — ad lives inline in the list
  */
 @Composable
 fun NotesScreen(
@@ -50,18 +54,17 @@ fun NotesScreen(
     premiumViewModel: PremiumViewModel = hiltViewModel(),
     adManager: AdManager
 ) {
-    val notes      by viewModel.notes.collectAsStateWithLifecycle()
-    val isPremium  by premiumViewModel.isPremium.collectAsStateWithLifecycle()
+    val notes     by viewModel.notes.collectAsStateWithLifecycle()
+    val isPremium by premiumViewModel.isPremium.collectAsStateWithLifecycle()
 
-    var isGridView  by remember { mutableStateOf(true) }
-    var searchQuery by remember { mutableStateOf("") }
-    var showPaywall by remember { mutableStateOf(false) }
+    var isGridView      by remember { mutableStateOf(true) }
+    var searchQuery     by remember { mutableStateOf("") }
+    var showPaywall     by remember { mutableStateOf(false) }
     var showLimitDialog by remember { mutableStateOf(false) }
 
     val scheme = MaterialTheme.colorScheme
     val nc     = LocalNightcheckColors.current
 
-    // Guard: block FAB if free and at limit (the VM also enforces this on save)
     val canAddNote = isPremium || notes.size < com.nightcheck.billing.UsageTracker.MAX_FREE_NOTES
 
     val filteredPinned = remember(notes, searchQuery) {
@@ -86,8 +89,8 @@ fun NotesScreen(
     // ── Dialogs ────────────────────────────────────────────────────────────
     if (showLimitDialog) {
         LimitReachedDialog(
-            title    = "Note limit reached",
-            message  = "Free accounts support up to ${com.nightcheck.billing.UsageTracker.MAX_FREE_NOTES} notes. Upgrade to add unlimited notes.",
+            title     = "Note limit reached",
+            message   = "Free accounts support up to ${com.nightcheck.billing.UsageTracker.MAX_FREE_NOTES} notes. Upgrade to add unlimited notes.",
             onUpgrade = { showLimitDialog = false; showPaywall = true },
             onDismiss = { showLimitDialog = false }
         )
@@ -101,6 +104,7 @@ fun NotesScreen(
 
     Scaffold(
         containerColor = scheme.background,
+        // No bottomBar — ad is inline in the list now
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -114,12 +118,6 @@ fun NotesScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add note", modifier = Modifier.size(22.dp))
             }
-        },
-        // ── Banner ad anchored to bottom (free only) ─────────────────────
-        bottomBar = {
-            if (!isPremium) {
-                BannerAdView(modifier = Modifier.fillMaxWidth().height(50.dp))
-            }
         }
     ) { innerPadding ->
 
@@ -132,28 +130,52 @@ fun NotesScreen(
                 start  = 20.dp,
                 end    = 20.dp,
                 top    = 20.dp,
-                bottom = 80.dp  // extra room above banner
+                bottom = 100.dp
             ),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalItemSpacing   = 10.dp
         ) {
 
-            // ── Header ─────────────────────────────────────────────────────
+            // ── Header with note count ──────────────────────────────────────
             item(span = StaggeredGridItemSpan.FullLine, key = "header") {
                 Row(
                     modifier              = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        "Notes",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight    = FontWeight.Bold,
-                            fontSize      = 28.sp,
-                            letterSpacing = (-0.5).sp,
-                            color         = scheme.onBackground
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            "Notes",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight    = FontWeight.Bold,
+                                fontSize      = 28.sp,
+                                letterSpacing = (-0.5).sp,
+                                color         = scheme.onBackground
+                            )
                         )
-                    )
+                        // Note count badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(scheme.surfaceVariant)
+                                .border(1.dp, nc.borderMuted, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text  = "${notes.size}",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color      = nc.textMuted,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize   = 12.sp
+                                )
+                            )
+                        }
+                    }
+                    // Grid/List toggle
                     Box(
                         modifier = Modifier
                             .size(36.dp)
@@ -177,9 +199,9 @@ fun NotesScreen(
             if (!isPremium) {
                 item(span = StaggeredGridItemSpan.FullLine, key = "usage_badge") {
                     FreeTierBadge(
-                        current = notes.size,
-                        max     = com.nightcheck.billing.UsageTracker.MAX_FREE_NOTES,
-                        label   = "notes",
+                        current   = notes.size,
+                        max       = com.nightcheck.billing.UsageTracker.MAX_FREE_NOTES,
+                        label     = "notes",
                         onUpgrade = { showPaywall = true }
                     )
                     Spacer(Modifier.height(12.dp))
@@ -208,7 +230,10 @@ fun NotesScreen(
                             Spacer(Modifier.width(10.dp))
                             Box(modifier = Modifier.weight(1f)) {
                                 if (searchQuery.isEmpty()) {
-                                    Text("Search notes...", style = MaterialTheme.typography.bodyMedium.copy(color = nc.textFaint))
+                                    Text(
+                                        "Search notes...",
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = nc.textFaint)
+                                    )
                                 }
                                 innerTextField()
                             }
@@ -219,33 +244,72 @@ fun NotesScreen(
                 Spacer(Modifier.height(14.dp))
             }
 
+            // ── Pinned section ─────────────────────────────────────────────
             if (filteredPinned.isNotEmpty()) {
-                item(span = StaggeredGridItemSpan.FullLine, key = "pinned_label") { NoteSectionLabel("Pinned") }
+                item(span = StaggeredGridItemSpan.FullLine, key = "pinned_label") {
+                    NoteSectionLabel("Pinned")
+                }
+                // Pinned notes as full-width cards with accent top border
                 items(filteredPinned, key = { "pinned_${it.id}" }, span = { StaggeredGridItemSpan.FullLine }) { note ->
-                    NoteCard(note = note, onClick = { onNavigateToNote(note.id) }, onTogglePin = { viewModel.togglePin(note) })
+                    NoteCard(
+                        note         = note,
+                        onClick      = { onNavigateToNote(note.id) },
+                        onTogglePin  = { viewModel.togglePin(note) }
+                    )
                 }
-                item(span = StaggeredGridItemSpan.FullLine, key = "allnotes_spacer") { Spacer(Modifier.height(4.dp)) }
+
+                // ── Inline banner ad — after pinned notes, styled as pinned card ──
+                if (!isPremium) {
+                    item(span = StaggeredGridItemSpan.FullLine, key = "inline_ad") {
+                        InlineAdCard(adManager = adManager)
+                    }
+                }
+
+                item(span = StaggeredGridItemSpan.FullLine, key = "pinned_bottom_spacer") {
+                    Spacer(Modifier.height(4.dp))
+                }
             }
 
+            // ── All Notes section ──────────────────────────────────────────
             if (filteredUnpinned.isNotEmpty()) {
-                item(span = StaggeredGridItemSpan.FullLine, key = "all_label") { NoteSectionLabel("All Notes") }
+                item(span = StaggeredGridItemSpan.FullLine, key = "all_label") {
+                    NoteSectionLabel("All Notes")
+                }
                 items(filteredUnpinned, key = { it.id }) { note ->
-                    NoteCard(note = note, onClick = { onNavigateToNote(note.id) }, onTogglePin = { viewModel.togglePin(note) })
+                    NoteCard(
+                        note        = note,
+                        onClick     = { onNavigateToNote(note.id) },
+                        onTogglePin = { viewModel.togglePin(note) }
+                    )
                 }
             }
 
+            // ── Empty state ────────────────────────────────────────────────
             if (notes.isEmpty()) {
                 item(span = StaggeredGridItemSpan.FullLine, key = "empty") {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
-                        Text("No notes yet. Tap + to create one.", style = MaterialTheme.typography.bodyMedium.copy(color = nc.textMuted))
+                    Box(
+                        modifier         = Modifier.fillMaxWidth().padding(vertical = 60.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No notes yet. Tap + to create one.",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = nc.textMuted)
+                        )
                     }
                 }
             }
 
+            // ── No search results ──────────────────────────────────────────
             if (notes.isNotEmpty() && filteredPinned.isEmpty() && filteredUnpinned.isEmpty()) {
                 item(span = StaggeredGridItemSpan.FullLine, key = "no_results") {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-                        Text("No notes match \"$searchQuery\"", style = MaterialTheme.typography.bodyMedium.copy(color = nc.textMuted))
+                    Box(
+                        modifier         = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No notes match \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = nc.textMuted)
+                        )
                     }
                 }
             }
@@ -253,12 +317,54 @@ fun NotesScreen(
     }
 }
 
+/**
+ * Banner ad wrapped in a card that mimics the pinned note style —
+ * same surface background, border, rounded corners, and a primary-color
+ * top-edge accent line — so it blends naturally into the pinned section.
+ */
+@Composable
+private fun InlineAdCard(adManager: AdManager) {
+    val scheme  = MaterialTheme.colorScheme
+    val nc      = LocalNightcheckColors.current
+    val primary = scheme.primary
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(scheme.surface)
+            .border(1.dp, nc.borderMuted, RoundedCornerShape(20.dp))
+            // Draw a 2dp primary-color gradient line along the top edge,
+            // identical to how the HTML reference styles pinned note cards.
+            .drawBehind {
+                drawLine(
+                    brush       = Brush.horizontalGradient(
+                        colors      = listOf(primary, primary.copy(alpha = 0.5f)),
+                        startX      = 0f,
+                        endX        = size.width
+                    ),
+                    start       = Offset(0f, 1f),
+                    end         = Offset(size.width, 1f),
+                    strokeWidth = 4f
+                )
+            }
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        BannerAdView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        )
+    }
+}
+
 @Composable
 private fun NoteSectionLabel(text: String) {
     val nc = LocalNightcheckColors.current
     Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(
+        text     = text.uppercase(),
+        style    = MaterialTheme.typography.labelSmall.copy(
             letterSpacing = 1.2.sp,
             fontWeight    = FontWeight.SemiBold,
             color         = nc.textFaint
@@ -268,8 +374,8 @@ private fun NoteSectionLabel(text: String) {
 }
 
 /**
- * Small usage bar shown at the top of the notes list for free tier users.
- * At 80%+ capacity the bar turns amber, at 100% it shows red + upgrade nudge.
+ * Free-tier usage progress bar shown below the header.
+ * Turns amber at 80 % capacity, red at 100 %.
  */
 @Composable
 private fun FreeTierBadge(
@@ -282,8 +388,8 @@ private fun FreeTierBadge(
     val nc       = LocalNightcheckColors.current
     val fraction = (current.toFloat() / max).coerceIn(0f, 1f)
     val barColor = when {
-        fraction >= 1f   -> MaterialTheme.colorScheme.error
-        fraction >= 0.8f -> androidx.compose.ui.graphics.Color(0xFFF59E0B) // amber
+        fraction >= 1f   -> scheme.error
+        fraction >= 0.8f -> androidx.compose.ui.graphics.Color(0xFFF59E0B)
         else             -> scheme.primary
     }
 
@@ -299,15 +405,18 @@ private fun FreeTierBadge(
             Text(
                 "$current / $max $label",
                 style = MaterialTheme.typography.labelMedium.copy(
-                    color = scheme.onSurface,
+                    color      = scheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
             )
             Spacer(Modifier.height(5.dp))
             LinearProgressIndicator(
-                progress  = { fraction },
-                modifier  = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
-                color     = barColor,
+                progress   = { fraction },
+                modifier   = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+                color      = barColor,
                 trackColor = nc.borderMuted
             )
         }

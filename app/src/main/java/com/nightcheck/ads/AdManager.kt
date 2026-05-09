@@ -61,7 +61,7 @@ class AdManager @Inject constructor(
         val request = AdRequest.Builder().build()
         InterstitialAd.load(
             context,
-            ca-app-pub-8523289380419686/3661638904,
+            "ca-app-pub-8523289380419686/3661638904",
             request,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
